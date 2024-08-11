@@ -1,13 +1,7 @@
 {
   "version": "2.0.0",
   "tasks": [
-    {
-      "type": "npm",
-      "script": "build",
-      "path": "tools/vscode-kstory",
-      "problemMatcher": [],
-      "label": "npm: build (kstory-language-client)"
-    },
+
     {
       "type": "shell",
       "command": "pnpm",
@@ -35,6 +29,18 @@
       },
       "problemMatcher": [],
       "label": "watch-lsp"
+    },
+    {
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["run", "build:exporter"],
+      "group": "build",
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "never"
+      },
+      "problemMatcher": [],
+      "label": "compile-exporter"
     }
   ]
 }

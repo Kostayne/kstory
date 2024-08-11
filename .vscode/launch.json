@@ -7,12 +7,12 @@
 			"name": "Launch KStory LSP Extension",
 			"runtimeExecutable": "${execPath}",
 			"args": [
-				"--extensionDevelopmentPath=${workspaceRoot}/lsp",
-				"${workspaceRoot}/lsp.ks"
+				"--extensionDevelopmentPath=${workspaceRoot}/packages/lsp",
+				"${workspaceRoot}/examples/basic-story.ks"
 			],
 			"outFiles": [
-				"${workspaceRoot}/dist/lsp/server.js",
-				"${workspaceRoot}/dist/lsp/client.js"
+				"${workspaceRoot}/packages/lsp/dist/lsp/server.js",
+				"${workspaceRoot}/packages/lsp/dist/lsp/client.js"
 			],
 			"autoAttachChildProcesses": true,
 			"preLaunchTask": "compile-lsp",
@@ -26,12 +26,12 @@
 			"name": "Launch KStory LSP Extension (Watch)",
 			"runtimeExecutable": "${execPath}",
 			"args": [
-				"--extensionDevelopmentPath=${workspaceRoot}/lsp",
-				"${workspaceRoot}/lsp.ks"
+				"--extensionDevelopmentPath=${workspaceRoot}/packages/lsp",
+				"${workspaceRoot}/examples/basic-story.ks"
 			],
 			"outFiles": [
-				"${workspaceRoot}/dist/lsp/server.js",
-				"${workspaceRoot}/dist/lsp/client.js"
+				"${workspaceRoot}/packages/lsp/dist/lsp/server.js",
+				"${workspaceRoot}/packages/lsp/dist/lsp/client.js"
 			],
 			"autoAttachChildProcesses": true,
 			"preLaunchTask": "watch-lsp",
@@ -43,9 +43,22 @@
 			"type": "node",
 			"request": "launch",
 			"name": "Debug LSP Server",
-			"program": "${workspaceRoot}/dist/lsp/server.js",
+			"program": "${workspaceRoot}/packages/lsp/dist/lsp/server.js",
 			"args": ["--stdio"],
-			"cwd": "${workspaceRoot}",
+			"cwd": "${workspaceRoot}/packages/lsp",
+			"preLaunchTask": "compile-lsp",
+			"env": {
+				"VSCODE_DEBUG_MODE": "true"
+			},
+			"console": "integratedTerminal",
+			"internalConsoleOptions": "neverOpen"
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Debug LSP Client",
+			"program": "${workspaceRoot}/packages/lsp/dist/lsp/client.js",
+			"cwd": "${workspaceRoot}/packages/lsp",
 			"preLaunchTask": "compile-lsp",
 			"env": {
 				"VSCODE_DEBUG_MODE": "true"
@@ -66,10 +79,11 @@
 		{
 			"type": "node",
 			"request": "launch",
-			"name": "Run Main App",
-			"program": "${workspaceRoot}/node_modules/.bin/tsx",
-			"args": ["src/main.ts"],
+			"name": "Debug Exporter",
+			"program": "${workspaceRoot}/packages/exporter/dist/index.js",
+			"args": ["${workspaceRoot}/examples/basic-story.ks", "--pretty"],
 			"cwd": "${workspaceRoot}",
+			"preLaunchTask": "compile-exporter",
 			"console": "integratedTerminal",
 			"internalConsoleOptions": "neverOpen"
 		}
