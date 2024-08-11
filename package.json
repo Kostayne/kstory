@@ -44,6 +44,7 @@
   },
   "dependencies": {
     "@kstory/core": "workspace:*",
+    "@kstory/lsp": "workspace:*",
     "commander": "^11.0.0",
     "chalk": "^5.0.0",
     "ora": "^7.0.0",

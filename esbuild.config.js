@@ -1,7 +1,7 @@
 const esbuild = require('esbuild');
 
 const serverConfig = {
-  entryPoints: ['lsp/server/src/server.ts'],
+  entryPoints: ['packages/lsp/server/src/server.ts'],
   bundle: true,
   platform: 'node',
   target: 'node18',
@@ -10,11 +10,9 @@ const serverConfig = {
   sourcemap: true,
   external: [
     'vscode-languageserver',
-    'vscode-languageserver-textdocument'
+    'vscode-languageserver-textdocument',
+    '@kstory/core'
   ],
-  alias: {
-    '@': './src'
-  },
   define: {
     'process.env.NODE_ENV': '"production"'
   },
@@ -24,7 +22,7 @@ const serverConfig = {
 };
 
 const clientConfig = {
-  entryPoints: ['lsp/client/src/extension.ts'],
+  entryPoints: ['packages/lsp/client/src/extension.ts'],
   bundle: true,
   platform: 'node',
   target: 'node18',
@@ -104,8 +102,8 @@ async function build() {
     await esbuild.build(exporterConfig);
     console.log('✅ Exporter built successfully');
     
-    // Copy files to lsp/dist/lsp for VS Code extension
-    const lspDistDir = path.join(__dirname, 'lsp', 'dist', 'lsp');
+    // Copy files to packages/lsp/dist/lsp for VS Code extension
+    const lspDistDir = path.join(__dirname, 'packages', 'lsp', 'dist', 'lsp');
     if (!fs.existsSync(lspDistDir)) {
       fs.mkdirSync(lspDistDir, { recursive: true });
     }
@@ -119,7 +117,7 @@ async function build() {
       path.join(lspDistDir, 'client.js')
     );
     
-    console.log('✅ Files copied to lsp/dist/lsp/');
+    console.log('✅ Files copied to packages/lsp/dist/lsp/');
   } catch (error) {
     console.error('❌ Build failed:', error);
     process.exit(1);

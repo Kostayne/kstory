@@ -1,5 +1,5 @@
 {
-	"name": "kstory-lsp",
+	"name": "@kstory/lsp",
 	"displayName": "KStory Language Support",
 	"description": "Language Server Protocol support for KStory interactive fiction language",
 	"author": "kostayne",
@@ -8,7 +8,7 @@
 	"icon": "icons/kstory.png",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/kstory/kstory-lsp"
+		"url": "https://github.com/kostayne/kstory"
 	},
 	"publisher": "kstory",
 	"categories": [
@@ -55,11 +55,12 @@
 		}
 	},
 	"scripts": {
-		"vscode:prepublish": "npm run compile",
-		"compile": "tsc -b",
-		"watch": "tsc -b -w",
+		"vscode:prepublish": "npm run build",
+		"build": "node esbuild.config.js",
+		"build:watch": "node esbuild.config.js --watch",
+		"build:server": "node esbuild.config.js --server",
+		"build:client": "node esbuild.config.js --client",
 		"lint": "eslint",
-		"postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
 		"test": "sh ./scripts/e2e.sh"
 	},
 	"dependencies": {
@@ -70,6 +71,7 @@
 		"@stylistic/eslint-plugin": "^2.9.0",
 		"@types/mocha": "^10.0.6",
 		"@types/node": "^22",
+		"esbuild": "^0.25.8",
 		"eslint": "^9.13.0",
 		"mocha": "^10.3.0",
 		"typescript": "^5.9.2",

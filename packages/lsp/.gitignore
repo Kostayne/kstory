@@ -1,0 +1,17 @@
+# Build outputs
+out/
+dist/
+*.tsbuildinfo
+
+# Dependencies
+node_modules/
+
+# VS Code extension
+*.vsix
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db

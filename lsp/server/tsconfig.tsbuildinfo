@@ -1,1 +1,0 @@
-{"root":["./src/actions.ts","./src/completion.ts","./src/diagnostics.ts","./src/documentManager.ts","./src/hover.ts","./src/logger.ts","./src/navigation.ts","./src/server.ts","./src/symbols.ts","./src/types.ts"],"version":"5.9.2"}
