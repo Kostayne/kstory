@@ -5,8 +5,8 @@ import type {
     AstStatement,
     AstTag,
     AstTextSegment,
-} from '@/ast';
-import type { ParserIssue } from '@/parser';
+} from '@kstory/core';
+import type { ParserIssue } from '@kstory/core';
 
 export interface JsonExport {
   metadata: {

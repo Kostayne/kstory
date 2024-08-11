@@ -1,0 +1,38 @@
+{
+  "name": "@kstory/core",
+  "version": "1.0.0",
+  "description": "Core parser and lexer for KStory interactive fiction language",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node esbuild.config.js",
+    "build:watch": "node esbuild.config.js --watch",
+    "test": "vitest",
+    "lint": "npx @biomejs/biome check src/"
+  },
+  "keywords": [
+    "kstory",
+    "parser",
+    "lexer",
+    "ast",
+    "interactive-fiction",
+    "visual-novel"
+  ],
+  "author": "kostayne",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kostayne/kstory"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.1.1",
+    "@types/node": "^24.0.13",
+    "esbuild": "^0.25.8",
+    "typescript": "^5.9.2",
+    "vitest": "^2.1.8"
+  }
+}

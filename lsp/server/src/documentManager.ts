@@ -1,5 +1,5 @@
 import type { TextDocument } from 'vscode-languageserver-textdocument';
-import { parseFromSource } from '@/parser';
+import { parseFromSource } from '@kstory/core';
 import { Logger } from './logger';
 
 const logger = Logger.getInstance();

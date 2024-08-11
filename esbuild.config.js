@@ -42,6 +42,23 @@ const clientConfig = {
   logLevel: 'info'
 };
 
+const coreConfig = {
+  entryPoints: ['packages/core/src/index.ts'],
+  bundle: true,
+  platform: 'node',
+  target: 'node18',
+  format: 'cjs',
+  outfile: 'packages/core/dist/index.js',
+  sourcemap: true,
+  external: [],
+  define: {
+    'process.env.NODE_ENV': '"production"'
+  },
+  minify: false,
+  keepNames: true,
+  logLevel: 'info'
+};
+
 const exporterConfig = {
   entryPoints: ['src/exporter/index.ts'],
   bundle: true,
@@ -51,6 +68,7 @@ const exporterConfig = {
   outfile: 'dist/exporter/index.js',
   sourcemap: true,
   external: [
+    '@kstory/core',
     'commander',
     'chalk',
     'ora',
@@ -70,6 +88,10 @@ const path = require('path');
 
 async function build() {
   try {
+    // Build core package first
+    await esbuild.build(coreConfig);
+    console.log('✅ Core package built successfully');
+    
     // Build server
     await esbuild.build(serverConfig);
     console.log('✅ LSP server built successfully');
@@ -107,13 +129,15 @@ async function build() {
 // Watch mode function
 async function watch() {
   try {
-    // Create contexts for server, client and exporter
+    // Create contexts for all packages
+    const coreContext = await esbuild.context(coreConfig);
     const serverContext = await esbuild.context(serverConfig);
     const clientContext = await esbuild.context(clientConfig);
     const exporterContext = await esbuild.context(exporterConfig);
     
     // Start watch mode for all
     await Promise.all([
+      coreContext.watch(),
       serverContext.watch(),
       clientContext.watch(),
       exporterContext.watch()
@@ -144,6 +168,13 @@ if (args.includes('--watch')) {
     console.log('✅ LSP server built successfully');
   }).catch((error) => {
     console.error('❌ Server build failed:', error);
+    process.exit(1);
+  });
+} else if (args.includes('--core')) {
+  esbuild.build(coreConfig).then(() => {
+    console.log('✅ Core package built successfully');
+  }).catch((error) => {
+    console.error('❌ Core build failed:', error);
     process.exit(1);
   });
 } else if (args.includes('--exporter')) {

@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-import { parseFromSource } from '@/parser';
+import { parseFromSource } from '@kstory/core';
 import { convertAstToJson } from './converter';
 import { convertAstToSimpleJson } from './converter-simple';
 
