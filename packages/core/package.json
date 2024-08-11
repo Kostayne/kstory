@@ -2,6 +2,7 @@
   "name": "@kstory/core",
   "version": "1.0.0",
   "description": "Core parser and lexer for KStory interactive fiction language",
+  "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [

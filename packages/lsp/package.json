@@ -4,6 +4,7 @@
 	"description": "Language Server Protocol support for KStory interactive fiction language",
 	"author": "kostayne",
 	"license": "MIT",
+	"private": true,
 	"version": "1.0.0",
 	"icon": "icons/kstory.png",
 	"repository": {

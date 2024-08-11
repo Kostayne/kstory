@@ -4,29 +4,11 @@
   "description": "Interactive fiction development tools - language server and CLI exporter for .ks files",
   "author": "kostayne",
   "license": "MIT",
+  "private": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/kostayne/kstory"
   },
-  "keywords": [
-    "interactive-fiction",
-    "visual-novel", 
-    "story-scripting",
-    "game-development",
-    "language-server",
-    "cli",
-    "json-export"
-  ],
-  "main": "packages/exporter/dist/index.js",
-  "bin": {
-    "kstory": "packages/exporter/dist/index.js"
-  },
-
-  "files": [
-    "packages/*/dist/",
-    "README.md",
-    "LICENSE"
-  ],
   "scripts": {
     "build": "pnpm run build:core && pnpm run build:lsp && pnpm run build:exporter",
     "build:core": "pnpm --filter @kstory/core run build",

@@ -304,7 +304,6 @@ export class Lexer {
     }
   }
 
-  // TODO: add choice text content token
   private handleChoiceText() {
     if (this.isChoiceTextBound() && !this.isInChoiceText) {
       this.isInChoiceText = true;

@@ -2,6 +2,7 @@
   "name": "@kstory/exporter",
   "version": "1.0.0",
   "description": "CLI exporter for KStory interactive fiction language",
+  "private": true,
   "main": "dist/index.js",
   "bin": {
     "kstory": "dist/index.js"
