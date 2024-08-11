@@ -17,9 +17,9 @@
     "cli",
     "json-export"
   ],
-  "main": "dist/exporter/index.js",
+  "main": "packages/exporter/dist/index.js",
   "bin": {
-    "kstory": "dist/exporter/index.js"
+    "kstory": "packages/exporter/dist/index.js"
   },
 
   "files": [
@@ -28,8 +28,6 @@
     "LICENSE"
   ],
   "scripts": {
-    "main": "tsx src/main.ts",
-    "test": "vitest",
     "build": "node esbuild.config.js --all",
     "build:core": "node esbuild.config.js --core",
     "build:lsp": "node esbuild.config.js",
@@ -45,10 +43,7 @@
   "dependencies": {
     "@kstory/core": "workspace:*",
     "@kstory/lsp": "workspace:*",
-    "commander": "^11.0.0",
-    "chalk": "^5.0.0",
-    "ora": "^7.0.0",
-    "glob": "^10.0.0"
+    "@kstory/exporter": "workspace:*"
   },
   "devDependencies": {
     "@biomejs/biome": "2.1.1",

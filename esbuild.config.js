@@ -58,7 +58,7 @@ const coreConfig = {
 };
 
 const exporterConfig = {
-  entryPoints: ['src/exporter/index.ts'],
+  entryPoints: ['packages/exporter/src/index.ts'],
   bundle: true,
   platform: 'node',
   target: 'node18',

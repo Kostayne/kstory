@@ -1,0 +1,47 @@
+{
+  "name": "@kstory/exporter",
+  "version": "1.0.0",
+  "description": "CLI exporter for KStory interactive fiction language",
+  "main": "dist/index.js",
+  "bin": {
+    "kstory": "dist/index.js"
+  },
+  "files": [
+    "dist/",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node esbuild.config.js",
+    "build:watch": "node esbuild.config.js --watch",
+    "test": "vitest",
+    "lint": "npx @biomejs/biome check src/"
+  },
+  "keywords": [
+    "kstory",
+    "cli",
+    "exporter",
+    "interactive-fiction",
+    "visual-novel",
+    "json-export"
+  ],
+  "author": "kostayne",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kostayne/kstory"
+  },
+  "dependencies": {
+    "@kstory/core": "workspace:*",
+    "commander": "^11.0.0",
+    "chalk": "^5.0.0",
+    "ora": "^7.0.0",
+    "glob": "^10.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.1.1",
+    "@types/node": "^24.0.13",
+    "esbuild": "^0.25.8",
+    "typescript": "^5.9.2",
+    "vitest": "^2.1.8"
+  }
+}
