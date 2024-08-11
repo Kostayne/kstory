@@ -17,6 +17,11 @@ const coreConfig = {
   logLevel: 'info'
 };
 
+// Export configuration for reuse
+module.exports = {
+  getConfig: () => coreConfig
+};
+
 // Build function
 async function build() {
   try {

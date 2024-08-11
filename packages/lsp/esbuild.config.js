@@ -40,6 +40,14 @@ const clientConfig = {
   logLevel: 'info'
 };
 
+// Export configurations for reuse
+module.exports = {
+  getConfig: () => ({
+    server: serverConfig,
+    client: clientConfig
+  })
+};
+
 // Build function
 async function build() {
   try {
@@ -50,26 +58,6 @@ async function build() {
     // Build client
     await esbuild.build(clientConfig);
     console.log('✅ LSP client built successfully');
-    
-    // Copy files to dist/lsp for VS Code extension
-    const fs = require('fs');
-    const path = require('path');
-    
-    const lspDistDir = path.join(__dirname, 'dist', 'lsp');
-    if (!fs.existsSync(lspDistDir)) {
-      fs.mkdirSync(lspDistDir, { recursive: true });
-    }
-    
-    fs.copyFileSync(
-      path.join(__dirname, 'dist', 'lsp', 'server.js'),
-      path.join(lspDistDir, 'server.js')
-    );
-    fs.copyFileSync(
-      path.join(__dirname, 'dist', 'lsp', 'client.js'),
-      path.join(lspDistDir, 'client.js')
-    );
-    
-    console.log('✅ Files copied to dist/lsp/');
   } catch (error) {
     console.error('❌ LSP build failed:', error);
     process.exit(1);

@@ -23,6 +23,11 @@ const exporterConfig = {
   logLevel: 'info'
 };
 
+// Export configuration for reuse
+module.exports = {
+  getConfig: () => exporterConfig
+};
+
 // Build function
 async function build() {
   try {

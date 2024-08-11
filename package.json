@@ -23,20 +23,20 @@
   },
 
   "files": [
-    "dist/",
+    "packages/*/dist/",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "node esbuild.config.js --all",
-    "build:core": "node esbuild.config.js --core",
-    "build:lsp": "node esbuild.config.js",
-    "build:lsp:watch": "node esbuild.config.js --watch",
-    "build:client": "node esbuild.config.js --client",
-    "build:server": "node esbuild.config.js --server",
-    "build:exporter": "node esbuild.config.js --exporter",
-    "export": "node dist/exporter/index.js",
-    "lsp": "node dist/lsp/server.js",
+    "build": "pnpm run build:core && pnpm run build:lsp && pnpm run build:exporter",
+    "build:core": "pnpm --filter @kstory/core run build",
+    "build:lsp": "pnpm --filter @kstory/lsp run build",
+    "build:lsp:watch": "pnpm --filter @kstory/lsp run build:watch",
+    "build:client": "pnpm --filter @kstory/lsp run build:client",
+    "build:server": "pnpm --filter @kstory/lsp run build:server",
+    "build:exporter": "pnpm --filter @kstory/exporter run build",
+    "export": "node packages/exporter/dist/index.js",
+    "lsp": "node packages/lsp/dist/lsp/server.js",
     "lsp:dev": "pnpm run build:lsp && pnpm run lsp",
     "dev": "pnpm run build:lsp:watch"
   },
