@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "main": "bun run src/main.ts"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@biomejs/biome": "2.1.1",
+    "@types/node": "^24.0.13"
+  }
+}
