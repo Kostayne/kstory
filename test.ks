@@ -6,3 +6,4 @@
 " text3
 /* multi */
 /* multi2 */ text4
+text5 /* multi3 */ text6

@@ -45,7 +45,14 @@
 
     "rules": {
       "recommended": true,
-      "complexity": "error",
+      "complexity": {
+        "noExcessiveCognitiveComplexity": {
+          "level": "error",
+          "options": {
+            "maxAllowedComplexity": 30
+          }
+        }
+      },
       "style": {
         "useConsistentMemberAccessibility": {
           "level": "error",

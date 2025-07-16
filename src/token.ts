@@ -4,14 +4,18 @@ export const TokenTypes = {
   INDENT: 'INDENT',
   DEDENT: 'DEDENT',
   NEWLINE: 'NEWLINE',
+
   COMMENT: 'COMMENT', // # comment
   COMMENT_MULTILINE: 'COMMENT_MULTILINE', // /* comment */
+
+  GOTO: 'GOTO', // => | ->
+
+  TAG: 'TAG', // @tag
   SECTION: 'SECTION', // ==
   IDENTIFIER: 'IDENTIFIER', // == name | @name
-  GOTO: 'GOTO', // => | ->
-  TAG: 'TAG', // @tag
   CHOICE: 'CHOICE', // +
   CHOICE_TAG: 'CHOICE_TAG', // @@tag
+  
   CHOICE_TEXT_BEGIN: 'CHOICE_TEXT_BEGIN', // ```
   CHOICE_TEXT_END: 'CHOICE_TEXT_END', // ```
 
