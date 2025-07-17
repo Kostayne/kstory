@@ -11,13 +11,14 @@ export const TokenTypes = {
   GOTO: 'GOTO', // => | ->
 
   TAG: 'TAG', // @tag
+  TAG_VALUE: 'TAG_VALUE', // @tag value
+
   SECTION: 'SECTION', // ==
   IDENTIFIER: 'IDENTIFIER', // == name | @name
   CHOICE: 'CHOICE', // +
   CHOICE_TAG: 'CHOICE_TAG', // @@tag
   
-  CHOICE_TEXT_BEGIN: 'CHOICE_TEXT_BEGIN', // ```
-  CHOICE_TEXT_END: 'CHOICE_TEXT_END', // ```
+  CHOICE_TEXT: 'CHOICE_TEXT', // ``` text here ```
 
   // values
   BOOLEAN: 'BOOLEAN', // false / true

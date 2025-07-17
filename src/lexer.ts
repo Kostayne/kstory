@@ -1,5 +1,5 @@
 import { spaceRegex } from './regex';
-import type { Token } from './token';
+import { type Token, type TokenType, TokenTypes } from './token';
 import { commentToken } from './tokens/comment';
 import { dedentToken } from './tokens/dedent';
 import { eofToken } from './tokens/eof';
@@ -7,6 +7,8 @@ import { indentToken } from './tokens/indent';
 import { multiCommentToken } from './tokens/multiComment';
 import { newLineToken } from './tokens/newLine';
 import { stringToken } from './tokens/string';
+import { tagToken } from './tokens/tag';
+import { tagValueToken } from './tokens/tagValue';
 
 const INDENT_WIDTH = 2;
 
@@ -34,19 +36,15 @@ export class Lexer {
   }
 
   public process() {
-    let i = 0;
+    // let i = 0;
 
     while (this.curChar) {
       this.handleCurrentToken();
-      i++;
+      // i++;
 
-      if (i > 5) {
-        debugger
-      }
-
-      if (this.tokens.length > 35 || i > 35) {
-        break;
-      }
+      // if (this.tokens.length > 35 || i > 35) {
+      //   break;
+      // }
     }
 
     this.tokens.push(eofToken());
@@ -56,9 +54,9 @@ export class Lexer {
     this.handleComment();
     this.handleNewLine();
     this.handleIndent();
+    this.handleTag();
     this.handleString();
   }
-
 
   private handleString() {
     if (this.isStringBegin()) {
@@ -68,6 +66,58 @@ export class Lexer {
     }
   }
 
+  private handleTag() {
+    if (!this.isTag()) {
+      return;
+    }
+
+    const tagName = this.getTagName();
+    const value = this.getTagValue();
+
+    this.tokens.push(tagToken(tagName));
+
+    if (value) {
+      this.tokens.push(tagValueToken(value));
+    }
+  }
+
+  private getTagName() {
+    let tagName = '';
+
+    while (this.curChar) {
+      tagName += this.curChar;
+
+      if (this.peek(1) === ' ' || this.getTokenTypeByOffset(1)) {
+        break;
+      }
+
+      this.step();
+    }
+
+    this.step();
+    return tagName;
+  }
+
+  private getTagValue() {
+    let value = '';
+
+    if (this.getTokenTypeByOffset(0)) {
+      return value;
+    }
+
+    while (this.curChar) {
+      if (this.getTokenTypeByOffset(1)) {
+        break;
+      }
+      
+      this.step();
+      value += this.curChar;      
+    }
+
+    this.step();
+    return value;
+  }
+
   private handleNewString() {
     let content = '';
 
@@ -75,16 +125,12 @@ export class Lexer {
       content += this.curChar;
       const nextChar = this.peek(1);
 
-      if (this.isComment(1) || this.isMultiComment(1)) {
-        break;
-      }
-
       if (nextChar === '\n') {
         this.isExtendingStr = true;
         break;
       }
 
-      if (this.isStringBegin(1)) {
+      if (this.getTokenTypeByOffset(1)) {
         break;
       }
 
@@ -209,8 +255,31 @@ export class Lexer {
     }
   }
 
+  private getTokenTypeByOffset(offset = 0): TokenType | undefined {
+    type TokenInfo = {
+      type: TokenType;
+      fn: (offset: number) => boolean;
+    };
+
+    const tokens: TokenInfo[] = [
+      { type: TokenTypes.NEWLINE, fn: this.isNewLine },
+      { type: TokenTypes.TAG, fn: this.isTag },
+      { type: TokenTypes.COMMENT, fn: this.isComment },
+      { type: TokenTypes.COMMENT_MULTILINE, fn: this.isMultiComment },
+      { type: TokenTypes.STRING, fn: this.isStringBegin },
+    ];
+
+    return tokens.find(info => {
+      return info.fn.call(this, offset);
+    })?.type;
+  }
+
   private isStringBegin(offset = 0) {
     return this.peek(offset) === '"' && this.peek(offset - 1) !== '\\';
+  }
+
+  private isTag(offset = 0) {
+    return this.peek(offset) === '@' && this.peek(offset - 1) !== '\\';
   }
 
   private isComment(offset = 0) {
@@ -231,6 +300,10 @@ export class Lexer {
       this.peek(offset - 1) === '*' &&
       this.peek(offset - 2) !== '\\'
     );
+  }
+
+  private isNewLine(offset = 0) {
+    return this.peek(offset) === '\n';
   }
 
   private skipWhitespace() {
