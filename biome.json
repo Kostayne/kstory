@@ -6,40 +6,6 @@
     "indentWidth": 2
   },
 
-  "javascript": {
-    "linter": {
-      "enabled": true
-    },
-
-    "formatter": {
-      "enabled": true,
-      "quoteStyle": "single",
-      "semicolons": "always",
-      "indentStyle": "space",
-      "trailingCommas": "es5",
-      "quoteProperties": "preserve",
-      "jsxQuoteStyle": "single"
-    },
-
-    "assist": {
-      "enabled": true
-    }
-  },
-
-  "json": {
-    "formatter": {
-      "enabled": false
-    },
-
-    "linter": {
-      "enabled": false
-    },
-
-    "assist": {
-      "enabled": false
-    }
-  },
-
   "linter": {
     "enabled": true,
 
@@ -70,6 +36,42 @@
       "nursery": {
         "noUnresolvedImports": "off"
       }
+    }
+  },
+
+  "javascript": {
+    "linter": {
+      "enabled": true
+    },
+
+    "formatter": {
+      "enabled": true,
+      "quoteStyle": "single",
+      "semicolons": "always",
+      "indentStyle": "space",
+      "trailingCommas": "es5",
+      "quoteProperties": "preserve",
+      "jsxQuoteStyle": "single",
+      "lineWidth": 80,
+      "indentWidth": 2
+    },
+
+    "assist": {
+      "enabled": true
+    }
+  },
+
+  "json": {
+    "formatter": {
+      "enabled": false
+    },
+
+    "linter": {
+      "enabled": false
+    },
+
+    "assist": {
+      "enabled": false
     }
   },
 

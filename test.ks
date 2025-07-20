@@ -14,3 +14,19 @@ text5 /* multi3 */ text6
     multi second
   */
 @tag_pre_text " text inlined with a tag
+@tag_pair1 @tag_pair2
+@tag_pair_with_val1 val 1 @tag_pair_with_val2 val 2
+@@choice_tag with a value
+koko
+
+== Section1 after space
+
+-> GotoVal
+=> GotoVal2
+->Invalid1
+=>Invalid2
+-> Valid, valid
+=> Valid, valid
+
++ Choice with inlined text # comment
++ Second choice /* multi comment */

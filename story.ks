@@ -9,7 +9,7 @@
 @color Red
 " Привет
 
-+ "Привет
++ Привет
   @@color red
   @@action hello
   => Normise # редирект на секцию Normise

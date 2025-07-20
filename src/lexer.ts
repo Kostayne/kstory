@@ -1,14 +1,25 @@
 import { spaceRegex } from './regex';
 import { type Token, type TokenType, TokenTypes } from './token';
-import { commentToken } from './tokens/comment';
-import { dedentToken } from './tokens/dedent';
-import { eofToken } from './tokens/eof';
-import { indentToken } from './tokens/indent';
-import { multiCommentToken } from './tokens/multiComment';
-import { newLineToken } from './tokens/newLine';
-import { stringToken } from './tokens/string';
-import { tagToken } from './tokens/tag';
-import { tagValueToken } from './tokens/tagValue';
+import {
+  choiceTagToken,
+  choiceTextToken,
+  choiceToken,
+  commentToken,
+  dedentToken,
+  eofToken,
+  gotoToken,
+  identifierToken,
+  indentToken,
+  multiCommentBeginToken,
+  multiCommentEndToken,
+  newLineToken,
+  replicaBeginToken,
+  replicaEndToken,
+  sectionToken,
+  stringToken,
+  tagToken,
+  tagValueToken,
+} from './tokenFactory';
 
 const INDENT_WIDTH = 2;
 
@@ -21,6 +32,7 @@ export class Lexer {
   private isInComment = false;
   private handledIndent = false;
   private isExtendingStr = false;
+  private lastStringTokenIndex = 0;
 
   public constructor(private source: string) {
     this.curChar = this.source[0];
@@ -30,41 +42,182 @@ export class Lexer {
     return this.tokens;
   }
 
-  private step() {
-    this.position++;
-    this.curChar = this.source[this.position];
+  private step(times = 1) {    
+    for (let i = 0; i < times; i++) {
+      this.position++;
+      this.curChar = this.source[this.position];
+    }
   }
 
   public process() {
-    // let i = 0;
-
     while (this.curChar) {
       this.handleCurrentToken();
-      // i++;
-
-      // if (this.tokens.length > 35 || i > 35) {
-      //   break;
-      // }
     }
 
     this.tokens.push(eofToken());
   }
 
   private handleCurrentToken() {
-    this.handleComment();
     this.handleNewLine();
     this.handleIndent();
-    this.handleTag();
-    this.handleString();
-  }
+    this.handleComment();
+    
+    if (!this.isInComment) {
+      if (!this.isExtendingStr) {
+        this.handleChoiceTag();
+        this.handleTag();
+        this.handleSection();
+        this.handleGoto();
+        this.handleChoice();
+      }
 
-  private handleString() {
-    if (this.isStringBegin()) {
-      this.handleNewString();
-    } else if (this.isExtendingStr) {
-      this.handleExtendString();
+      this.handleString();
+    }
+
+    if (!this.isInComment && !this.isExtendingStr) {
+      this.handleError();
     }
   }
+
+  private handleGoto() {
+    if (!this.isGoto()) {
+      return;
+    }
+
+    const content = `${this.curChar}> `;
+
+    // skipping over the '-> '
+    this.step(3);
+    this.tokens.push(gotoToken(content));
+
+    this.handleIdentifier();
+  }
+
+  private handleIdentifier() {
+    const content = this.readLineUntilComment();
+
+    this.step();
+    this.tokens.push(identifierToken(content));
+  }
+
+  private handleError() {
+    let content = '';
+
+    while (!this.getTokenType()) {
+      if (this.curChar === undefined) {
+        break;
+      }
+
+      content += this.curChar;
+      this.step();
+    }
+
+    if (content.length > 0) {
+      this.tokens.push({
+        type: TokenTypes.ERROR,
+        value: content,
+      });
+    }
+  }
+
+  private handleChoice() {
+    if (!this.isChoice()) {
+      return;
+    }
+
+    // skipping over the '+ '
+    this.step(2);
+    this.tokens.push(choiceToken());
+
+    this.handleChoiceTextInline();
+  }
+
+  private handleChoiceTextInline() {
+    const content = this.readLineUntilComment();
+
+    if (content.length > 0) {
+      this.tokens.push(choiceTextToken(content));
+    }
+  }
+
+  private handleSection() {
+    if (!this.isSection()) {
+      return;
+    }
+
+    // skipping over the '== '
+    this.step(3);
+    this.tokens.push(sectionToken());
+
+    this.handleSectionName();
+  }
+
+  private handleSectionName() {
+    let content = '';
+
+    if (this.curChar === ' ' || this.isNewLine()) {
+      return;
+    }
+
+    while (this.curChar) {
+      content += this.curChar;
+
+      if (this.peek(1) === ' ' || this.isNewLine(1)) {
+        break;
+      }
+
+      this.step();
+    }
+
+    this.step();
+    this.tokens.push(identifierToken(content));
+  }
+
+  private handleChoiceTag() {
+    if (!this.isChoiceTag()) {
+      return;
+    }
+
+    // stepping over the '@', so we can use getTagName fn.
+    this.step();
+
+    const tagName = this.getTagName();
+    const value = this.getTagValue();
+
+    this.tokens.push(choiceTagToken(tagName));
+
+    if (value) {
+      this.tokens.push(tagValueToken(value));
+    }
+  }
+
+  // TODO: add choice text
+  // private handleChoiceText() {
+  //   if (!this.isChoiceText()) {
+  //     return;
+  //   }
+
+  //   let content = '```';
+
+  //   this.step(3);
+
+  //   while (this.curChar) {
+  //     content += this.curChar;
+
+  //     if (this.isNewLine()) {
+  //     }
+
+  //     if (this.isChoiceText()) {
+  //       content += '```';
+  //       break;
+  //     }
+
+  //     this.step();
+  //   }
+
+  //   this.step();
+  //   this.tokens.push(choiceTextToken(content));
+  // }
 
   private handleTag() {
     if (!this.isTag()) {
@@ -87,7 +240,7 @@ export class Lexer {
     while (this.curChar) {
       tagName += this.curChar;
 
-      if (this.peek(1) === ' ' || this.getTokenTypeByOffset(1)) {
+      if (this.peek(1) === ' ' || this.peek(1) === '\n') {
         break;
       }
 
@@ -101,69 +254,67 @@ export class Lexer {
   private getTagValue() {
     let value = '';
 
-    if (this.getTokenTypeByOffset(0)) {
+    if (this.getTokenType(0)) {
       return value;
     }
 
     while (this.curChar) {
-      if (this.getTokenTypeByOffset(1)) {
+      if (this.getTokenType(1) || this.isEOF(1)) {
         break;
       }
-      
+
       this.step();
-      value += this.curChar;      
+      value += this.curChar;
     }
 
     this.step();
     return value;
   }
 
-  private handleNewString() {
-    let content = '';
-
-    while (this.curChar) {
-      content += this.curChar;
-      const nextChar = this.peek(1);
-
-      if (nextChar === '\n') {
-        this.isExtendingStr = true;
-        break;
+  private handleString() {
+    if (this.isReplicaBegin()) {
+      if (this.isExtendingStr) {
+        this.handleEndReplica();
       }
 
-      if (this.getTokenTypeByOffset(1)) {
-        break;
-      }
-
-      this.step();
+      this.handleNewReplica();
+    } else if (this.isExtendingStr) {
+      this.handleExtendReplica();
     }
-
-    // reached the end of the string
-    // move to the next token
-    this.step();
-
-    this.tokens.push(stringToken(content));
   }
 
-  private handleExtendString() {
+  private handleNewReplica() {
+    this.step(2);
+    this.isExtendingStr = true;
+    this.tokens.push(replicaBeginToken());
+
+    this.handleExtendReplica();
+  }
+
+  private handleExtendReplica() {
     let content = '';
 
-    if (this.isStringBegin()) {
-      this.isExtendingStr = false;
+    // The start of tag, choice tag, or new replica is the end of the current string
+    if (this.isReplicaBegin() || this.isTag() || this.isChoiceTag() || this.isEOF()) {
+      this.handleEndReplica();
       return;
     }
 
-    if (this.isComment() || this.isMultiComment() || this.curChar === '\n') {
+    // skipping other tokens such as comments
+    if (this.getTokenType(0)) {
       return;
     }
 
+    let isReplicaEnding = false;
     while (this.curChar) {
       content += this.curChar;
 
-      if (
-        this.isComment(1) ||
-        this.isMultiComment(1) ||
-        this.peek(1) === '\n'
-      ) {
+      if (this.isTag(1) || this.isChoiceTag(1) || this.isReplicaBegin(1) || this.isEOF(1)) {
+        isReplicaEnding = true;
+        break;
+      }
+
+      if (this.getTokenType(1)) {
         break;
       }
 
@@ -172,6 +323,16 @@ export class Lexer {
 
     this.step();
     this.tokens.push(stringToken(content));
+    this.lastStringTokenIndex = this.tokens.length - 1;
+
+    if (isReplicaEnding) {
+      this.handleEndReplica();
+    }
+  }
+
+  private handleEndReplica() {
+    this.isExtendingStr = false;
+    this.tokens.splice(this.lastStringTokenIndex + 1, 0, replicaEndToken());
   }
 
   private handleIndent() {
@@ -182,7 +343,7 @@ export class Lexer {
     let spaces = 0;
 
     while (this.curChar?.match(spaceRegex)) {
-      if (this.curChar === '\n') {
+      if (this.isNewLine()) {
         break;
       }
 
@@ -199,8 +360,9 @@ export class Lexer {
 
     let indentDiff = Math.floor((spaces - this.prevIndent) / INDENT_WIDTH);
 
-    if (indentDiff !== 0) {
-      this.isExtendingStr = false;
+    // End current replica on indent change
+    if (indentDiff !== 0 && this.isExtendingStr) {
+      this.handleEndReplica();
     }
 
     while (indentDiff !== 0) {
@@ -218,44 +380,75 @@ export class Lexer {
   }
 
   private handleComment() {
+    if (this.isInComment) {
+      this.handleMultiCommentExtend();
+      return;
+    }
+
     // new multiline comment
     if (this.isMultiComment()) {
       this.isInComment = true;
-      let content = '/*';
+      this.step(2); // skip over /*
 
-      this.step();
-
-      while (this.curChar) {
-        this.step();
-        content += this.curChar;
-
-        if (this.isMultiCommentEnd()) {
-          this.isInComment = false;
-          break;
-        }
-      }
-
-      this.tokens.push(multiCommentToken(content));
-      this.step();
+      this.tokens.push(multiCommentBeginToken());
+      this.handleMultiCommentExtend();
       return;
     }
 
     if (this.isComment()) {
-      const val = this.skipLine();
+      const val = this.readLine();
       this.tokens.push(commentToken(val));
     }
+  }
+
+  private handleMultiCommentExtend() {
+    let content = '';
+
+    // check cur char
+    if (this.isMultiCommentEnd()) {
+      this.isInComment = false;
+      this.tokens.push(multiCommentEndToken());
+      this.step(2); // skip over */
+      return;
+    }
+
+    if (this.isNewLine()) {
+      this.step();
+      return;
+    }
+
+    // check next char
+    while (this.curChar) {
+      if (this.isNewLine(1) || this.isMultiCommentEnd(1)) {
+        break;
+      }
+      
+      content += this.curChar;
+      this.step();
+    }
+
+    // adding comment content
+    this.tokens.push(stringToken(content));
+    
+    if (this.isMultiCommentEnd(1)) {
+      this.isInComment = false;
+      this.tokens.push(multiCommentEndToken());
+      this.step();
+    }
+
+    this.step();
   }
 
   private handleNewLine() {
     if (this.curChar === '\n') {
       this.tokens.push(newLineToken());
-      this.curLine++;
       this.handledIndent = false;
+      this.curLine++;
       this.step();
     }
   }
 
-  private getTokenTypeByOffset(offset = 0): TokenType | undefined {
+  private getTokenType(offset = 0): TokenType | undefined {
     type TokenInfo = {
       type: TokenType;
       fn: (offset: number) => boolean;
@@ -263,23 +456,66 @@ export class Lexer {
 
     const tokens: TokenInfo[] = [
       { type: TokenTypes.NEWLINE, fn: this.isNewLine },
+      { type: TokenTypes.CHOICE_TAG, fn: this.isChoiceTag },
       { type: TokenTypes.TAG, fn: this.isTag },
       { type: TokenTypes.COMMENT, fn: this.isComment },
-      { type: TokenTypes.COMMENT_MULTILINE, fn: this.isMultiComment },
-      { type: TokenTypes.STRING, fn: this.isStringBegin },
+      { type: TokenTypes.COMMENT_MULTILINE_BEGIN, fn: this.isMultiComment },
+      { type: TokenTypes.GOTO, fn: this.isGoto },
+      { type: TokenTypes.SECTION, fn: this.isSection },
+      { type: TokenTypes.CHOICE, fn: this.isChoice },
+      { type: TokenTypes.STRING, fn: this.isReplicaBegin },
     ];
 
-    return tokens.find(info => {
+    return tokens.find((info) => {
       return info.fn.call(this, offset);
     })?.type;
   }
 
-  private isStringBegin(offset = 0) {
+  private isGoto(offset = 0) {
+    if (
+      !this.isNotEscapingChar('=', offset) &&
+      !this.isNotEscapingChar('-', offset)
+    ) {
+      return false;
+    }
+
+    return this.peek(offset + 1) === '>' && this.peek(offset + 2) === ' ';
+  }
+
+  private isSection(offset = 0) {
+    return (
+      this.isNotEscapingChar('=', offset) &&
+      this.peek(offset + 1) === '=' &&
+      this.peek(offset + 2) === ' '
+    );
+  }
+
+  private isChoice(offset = 0) {
+    if (!this.isFirstOnLine(offset)) {
+      return false;
+    }
+
+    return this.isNotEscapingChar('+', offset) && this.peek(offset + 1) === ' ';
+  }
+
+  private isChoiceText(offset = 0) {
+    return (
+      this.isNotEscapingChar('`', offset) &&
+      this.peek(offset + 1) === '`' &&
+      this.peek(offset + 2) === '`'
+    );
+  }
+
+  private isReplicaBegin(offset = 0) {
     return this.peek(offset) === '"' && this.peek(offset - 1) !== '\\';
   }
 
   private isTag(offset = 0) {
-    return this.peek(offset) === '@' && this.peek(offset - 1) !== '\\';
+    return this.isNotEscapingChar('@', offset);
+  }
+
+  private isChoiceTag(offset = 0) {
+    return this.isNotEscapingChar('@', offset) && this.peek(1) === '@';
   }
 
   private isComment(offset = 0) {
@@ -306,17 +542,27 @@ export class Lexer {
     return this.peek(offset) === '\n';
   }
 
-  private skipWhitespace() {
-    while (this.curChar?.match(spaceRegex)) {
-      if (this.curChar === '\n') {
-        break;
+  private isEOF(offset = 0) {
+    return this.peek(offset) === undefined;
+  }
+
+  private isFirstOnLine(offset = 0) {
+    let prevPos = offset - 1;
+
+    while (true) {
+      if (this.peek(prevPos) === undefined || this.peek(prevPos) === '\n') {
+        return true;
       }
 
-      this.step();
+      if (!this.peek(prevPos).match(spaceRegex)) {
+        return false;
+      }
+
+      prevPos--;
     }
   }
 
-  private skipLine() {
+  private readLine() {
     let content = '';
 
     while (this.curChar && this.curChar !== '\n') {
@@ -325,6 +571,25 @@ export class Lexer {
     }
 
     return content;
+  }
+
+  private readLineUntilComment() {
+    let content = '';
+
+    while (this.curChar && this.curChar !== '\n') {
+      if (this.isComment() || this.isMultiComment()) {
+        break;
+      }
+
+      content += this.curChar;
+      this.step();
+    }
+
+    return content;
+  }
+
+  private isNotEscapingChar(char: string, offset = 0) {
+    return this.peek(offset) === char && this.peek(offset - 1) !== '\\';
   }
 
   private peek(pos = 0) {
