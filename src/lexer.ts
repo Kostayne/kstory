@@ -1,4 +1,3 @@
-import { spaceRegex } from './regex';
 import { type Token, type TokenType, TokenTypes } from './token';
 import {
   callArgumentToken,
@@ -44,7 +43,6 @@ export class Lexer {
   private prevIndent = 0;
   private isInComment = false;
   private isInChoiceText = false;
-  private handledIndent = false;
   private isExtendingStr = false;
   private lastStringTokenIndex = 0;
 
@@ -72,8 +70,8 @@ export class Lexer {
   }
 
   private handleCurrentToken() {
-    this.handleIndent();
     this.handleNewLine();
+    this.handleIndent();
     this.handleComment();
 
     if (this.isInComment) return;
@@ -189,14 +187,14 @@ export class Lexer {
   private handleSectionName() {
     let content = '';
 
-    if (this.curChar === ' ' || this.isNewLine()) {
+    if (this.isWhitespace() || this.isNewLine()) {
       return;
     }
 
     while (this.curChar) {
       content += this.curChar;
 
-      if (this.peek(1) === ' ' || this.isNewLine(1)) {
+      if (this.isWhitespace(1) || this.isNewLine(1)) {
         break;
       }
 
@@ -344,7 +342,7 @@ export class Lexer {
     }
 
     // Handle escaped parentheses in function name
-    if (this.curChar === '(' && this.peek(-1) === '\\') {
+    if (this.curChar === '(' && this.isEscapedChar()) {
       // This is an escaped parenthesis, treat as part of function name
       functionName += this.curChar;
       this.step();
@@ -374,14 +372,14 @@ export class Lexer {
     let inQuotes = false;
 
     while (this.curChar && depth > 0) {
-      if (this.curChar === '"' && this.peek(-1) !== '\\') {
+      if (this.curChar === '"' && !this.isEscapedChar()) {
         inQuotes = !inQuotes;
       }
 
       if (!inQuotes) {
-        if (this.curChar === '(' && this.peek(-1) !== '\\') {
+        if (this.curChar === '(' && !this.isEscapedChar()) {
           depth++;
-        } else if (this.curChar === ')' && this.peek(-1) !== '\\') {
+        } else if (this.curChar === ')' && !this.isEscapedChar()) {
           depth--;
           if (depth === 0) {
             break;
@@ -411,7 +409,7 @@ export class Lexer {
     while (this.curChar) {
       tagName += this.curChar;
 
-      if (this.peek(1) === ' ' || this.peek(1) === '\n') {
+      if (this.isWhitespace(1) || this.isNewLine(1)) {
         break;
       }
 
@@ -474,9 +472,9 @@ export class Lexer {
       let depth = 1;
       while (this.curChar && depth > 0) {
         result += this.curChar;
-        if (this.curChar === '(' && this.peek(-1) !== '\\') {
+        if (this.curChar === '(' && !this.isEscapedChar()) {
           depth++;
-        } else if ((this.curChar as string) === ')' && this.peek(-1) !== '\\') {
+        } else if ((this.curChar as string) === ')' && !this.isEscapedChar()) {
           depth--;
         }
         this.step();
@@ -601,13 +599,18 @@ export class Lexer {
   }
 
   private handleIndent() {
-    if (this.isInComment || this.handledIndent) {
+    if (this.isInComment) {
+      return;
+    }
+
+    // Only process indentation if we're at the beginning of a line
+    if (!this.isFirstOnLine()) {
       return;
     }
 
     let spaces = 0;
 
-    while (this.curChar?.match(spaceRegex)) {
+    while (this.curChar && this.isWhitespace()) {
       if (this.isNewLine()) {
         break;
       }
@@ -640,7 +643,6 @@ export class Lexer {
       }
     }
 
-    this.handledIndent = true;
     this.prevIndent = spaces;
   }
 
@@ -670,7 +672,7 @@ export class Lexer {
     let content = '#';
     this.step(); // skip over #
     
-    while (this.curChar && this.curChar !== '\n') {
+    while (this.curChar && !this.isEndOfLine()) {
       content += this.curChar;
       this.step();
     }
@@ -699,7 +701,7 @@ export class Lexer {
     while (this.curChar) {
       content += this.curChar;
 
-      if (this.isNewLine(1) || this.isMultiCommentEnd(1)) {
+      if (this.isEndOfLine(1) || this.isMultiCommentEnd(1)) {
         break;
       }
 
@@ -721,7 +723,6 @@ export class Lexer {
   private handleNewLine() {
     if (this.curChar === '\n') {
       this.tokens.push(newLineToken());
-      this.handledIndent = false;
       this.curLine++;
       this.step();
     }
@@ -824,11 +825,11 @@ export class Lexer {
     let prevPos = offset - 1;
 
     while (true) {
-      if (this.peek(prevPos) === undefined || this.peek(prevPos) === '\n') {
+      if (this.isEOF(prevPos) || this.isNewLine(prevPos)) {
         return true;
       }
 
-      if (!this.peek(prevPos).match(spaceRegex)) {
+      if (!this.isWhitespace(prevPos)) {
         return false;
       }
 
@@ -839,7 +840,7 @@ export class Lexer {
   private readLine() {
     let content = '';
 
-    while (this.curChar && this.curChar !== '\n') {
+    while (this.curChar && !this.isEndOfLine()) {
       content += this.curChar;
       this.step();
     }
@@ -850,7 +851,7 @@ export class Lexer {
   private readLineUntilComment() {
     let content = '';
 
-    while (this.curChar && this.curChar !== '\n') {
+    while (this.curChar && !this.isEndOfLine()) {
       if (this.isComment() || this.isMultiComment()) {
         break;
       }
@@ -864,6 +865,19 @@ export class Lexer {
 
   private isNotEscapingChar(char: string, offset = 0) {
     return this.peek(offset) === char && this.peek(offset - 1) !== '\\';
+  }
+
+  private isEndOfLine(offset = 0): boolean {
+    return this.isNewLine(offset) || this.isEOF(offset);
+  }
+
+  private isWhitespace(offset = 0): boolean {
+    const char = this.peek(offset);
+    return char === ' ' || char === '\t';
+  }
+
+  private isEscapedChar(offset = 0): boolean {
+    return this.peek(offset - 1) === '\\';
   }
 
   private peek(pos = 0) {
