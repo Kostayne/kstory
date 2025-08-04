@@ -4,8 +4,7 @@ import {
   choiceTagToken,
   choiceTextBoundToken,
   choiceToken,
-  commentToken,
-  dedentToken,
+  commentContentToken, dedentToken,
   eofToken,
   gotoToken,
   identifierToken,
@@ -18,7 +17,7 @@ import {
   sectionToken,
   stringToken,
   tagToken,
-  tagValueToken,
+  tagValueToken
 } from './tokenFactory';
 
 const INDENT_WIDTH = 2;
@@ -417,7 +416,6 @@ export class Lexer {
     this.prevIndent = spaces;
   }
 
-  // TODO: add a token for comment content
   private handleComment() {
     if (this.isInComment) {
       this.handleMultiCommentExtend();
@@ -435,8 +433,22 @@ export class Lexer {
     }
 
     if (this.isComment()) {
-      const val = this.readLine();
-      this.tokens.push(commentToken(val));
+      this.handleCommentContent();
+    }
+  }
+
+  private handleCommentContent() {
+    // Include the # symbol in the content
+    let content = '#';
+    this.step(); // skip over #
+    
+    while (this.curChar && this.curChar !== '\n') {
+      content += this.curChar;
+      this.step();
+    }
+    
+    if (content.length > 1) { // More than just '#'
+      this.tokens.push(commentContentToken(content));
     }
   }
 
@@ -467,7 +479,7 @@ export class Lexer {
     }
 
     // adding comment content
-    this.tokens.push(stringToken(content));
+    this.tokens.push(commentContentToken(content));
 
     if (this.isMultiCommentEnd(1)) {
       this.isInComment = false;

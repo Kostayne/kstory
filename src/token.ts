@@ -6,6 +6,7 @@ export const TokenTypes = {
   NEWLINE: 'NEWLINE',
 
   COMMENT: 'COMMENT', // # comment
+  COMMENT_CONTENT: 'COMMENT_CONTENT', // comment content
 
   REPLICA_BEGIN: 'REPLICA_BEGIN', // "
   REPLICA_END : 'REPLICA_END',

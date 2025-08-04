@@ -7,6 +7,13 @@ export function commentToken(value: string): Token<string> {
   };
 }
 
+export function commentContentToken(value: string): Token<string> {
+  return {
+    type: TokenTypes.COMMENT_CONTENT,
+    value: value,
+  };
+}
+
 export function multiCommentBeginToken(): Token<string> {
   return {
     type: TokenTypes.COMMENT_MULTILINE_BEGIN,
