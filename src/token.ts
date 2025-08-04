@@ -24,6 +24,7 @@ export const TokenTypes = {
 
   CHOICE: 'CHOICE', // +
   CHOICE_TAG: 'CHOICE_TAG', // @@tag
+  CHOICE_TEXT: 'CHOICE_TEXT', // choice text content
   CHOICE_TEXT_BOUND: 'CHOICE_TEXT_BOUND', // ```
 
   // values

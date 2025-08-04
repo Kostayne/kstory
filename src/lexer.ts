@@ -3,8 +3,10 @@ import { type Token, type TokenType, TokenTypes } from './token';
 import {
   choiceTagToken,
   choiceTextBoundToken,
+  choiceTextToken,
   choiceToken,
-  commentContentToken, dedentToken,
+  commentContentToken,
+  dedentToken,
   eofToken,
   gotoToken,
   identifierToken,
@@ -144,7 +146,7 @@ export class Lexer {
     if (content.length > 0) {
       // true stands for silent (inlined)
       this.tokens.push(choiceTextBoundToken(true));
-      this.tokens.push(stringToken(content));
+      this.tokens.push(choiceTextToken(content));
       this.tokens.push(choiceTextBoundToken(true));
     }
   }
@@ -214,33 +216,61 @@ export class Lexer {
   }
 
   private handleChoiceTextExtend(isInlined = false) {
-    if (this.isNewLine() || this.isComment() || this.isMultiComment()) {
-      return;
-    }
-
     let content = '';
     let isChoiceTextEnding = false;
 
     while (this.curChar) {
-      content += this.curChar;
-      this.step();
-
-      if (this.isNewLine() || this.isComment() || this.isMultiComment()) {
-        break;
+      // Handle newline
+      if (this.isNewLine()) {
+        if (content.length > 0) {
+          this.tokens.push(choiceTextToken(content));
+          content = '';
+        }
+        this.tokens.push(newLineToken());
+        this.step();
+        continue;
       }
 
+      // Handle single line comment
+      if (this.isComment()) {
+        if (content.length > 0) {
+          this.tokens.push(choiceTextToken(content));
+          content = '';
+        }
+        this.handleCommentContent();
+        continue;
+      }
+
+      // Handle multiline comment
+      if (this.isMultiComment()) {
+        if (content.length > 0) {
+          this.tokens.push(choiceTextToken(content));
+          content = '';
+        }
+        this.isInComment = true;
+        this.step(2); // skip over /*
+        this.tokens.push(multiCommentBeginToken());
+        this.handleMultiCommentExtend();
+        continue;
+      }
+
+      // Handle choice text ending
       if (this.isChoiceTextBound()) {
         isChoiceTextEnding = true;
         break;
       }
+
+      content += this.curChar;
+      this.step();
     }
 
-    this.step();
-    this.tokens.push(stringToken(content));
+    if (content.length > 0) {
+      this.tokens.push(choiceTextToken(content));
+    }
 
     if (isChoiceTextEnding) {
       this.isInChoiceText = false;
-
+      this.step(3); // skip over ```
       // Making token silent if it's inlined
       this.tokens.push(choiceTextBoundToken(isInlined));
     }

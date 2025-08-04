@@ -87,6 +87,13 @@ export function choiceTextBoundToken(silent = false): Token<string> {
   };
 }
 
+export function choiceTextToken(value: string): Token<string> {
+  return {
+    type: TokenTypes.CHOICE_TEXT,
+    value: value,
+  };
+}
+
 export function choiceTagToken(val: string): Token<string> {
   return {
     type: TokenTypes.CHOICE_TAG,
