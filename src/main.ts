@@ -2,8 +2,8 @@ import { readFile } from 'node:fs/promises'
 import { Lexer } from './lexer'
 import { printToken } from './utils/printToken'
 
-const f = await readFile('./test.ks')
-const str = f.toString()
+const file = await readFile('./test.ks')
+const str = file.toString()
 
 const lexer = new Lexer(str)
 lexer.process()

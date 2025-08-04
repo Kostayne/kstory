@@ -30,3 +30,10 @@ koko
 
 + Choice with inlined text # comment
 + Second choice /* multi comment */
+
++
+  ```
+  Choice text multiline.
+  # even with a regular comment
+  /* and multi comment */ Choice text continue.
+  ```

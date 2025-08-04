@@ -66,17 +66,17 @@ export function stringToken(value: string): Token<string> {
   };
 }
 
-export function choiceToken(): Token<string> {
+export function choiceToken(val: string): Token<string> {
   return {
     type: TokenTypes.CHOICE,
-    value: '+ ',
+    value: val,
   };
 }
 
-export function choiceTextToken(val: string): Token<string> {
+export function choiceTextBoundToken(silent = false): Token<string> {
   return {
-    type: TokenTypes.CHOICE_TEXT_BEGIN,
-    value: val,
+    type: TokenTypes.CHOICE_TEXT_BOUND,
+    value: silent ? '' : '```',
   };
 }
 

@@ -2,7 +2,7 @@ import { spaceRegex } from './regex';
 import { type Token, type TokenType, TokenTypes } from './token';
 import {
   choiceTagToken,
-  choiceTextToken,
+  choiceTextBoundToken,
   choiceToken,
   commentToken,
   dedentToken,
@@ -30,6 +30,7 @@ export class Lexer {
   private curLine = 0;
   private prevIndent = 0;
   private isInComment = false;
+  private isInChoiceText = false;
   private handledIndent = false;
   private isExtendingStr = false;
   private lastStringTokenIndex = 0;
@@ -42,7 +43,7 @@ export class Lexer {
     return this.tokens;
   }
 
-  private step(times = 1) {    
+  private step(times = 1) {
     for (let i = 0; i < times; i++) {
       this.position++;
       this.curChar = this.source[this.position];
@@ -61,9 +62,9 @@ export class Lexer {
     this.handleNewLine();
     this.handleIndent();
     this.handleComment();
-    
+
     if (!this.isInComment) {
-      if (!this.isExtendingStr) {
+      if (!this.isExtendingStr && !this.isInChoiceText) {
         this.handleChoiceTag();
         this.handleTag();
         this.handleSection();
@@ -71,10 +72,11 @@ export class Lexer {
         this.handleChoice();
       }
 
+      this.handleChoiceText();
       this.handleString();
     }
 
-    if (!this.isInComment && !this.isExtendingStr) {
+    if (!this.isInComment && !this.isExtendingStr && !this.isInChoiceText) {
       this.handleError();
     }
   }
@@ -126,8 +128,13 @@ export class Lexer {
     }
 
     // skipping over the '+ '
-    this.step(2);
-    this.tokens.push(choiceToken());
+    if (this.peek(1) === ' ') {
+      this.step(2);
+      this.tokens.push(choiceToken('+ '));
+    } else {
+      this.step(1);
+      this.tokens.push(choiceToken('+'));
+    }
 
     this.handleChoiceTextInline();
   }
@@ -136,7 +143,10 @@ export class Lexer {
     const content = this.readLineUntilComment();
 
     if (content.length > 0) {
-      this.tokens.push(choiceTextToken(content));
+      // true stands for silent (inlined)
+      this.tokens.push(choiceTextBoundToken(true));
+      this.tokens.push(stringToken(content));
+      this.tokens.push(choiceTextBoundToken(true));
     }
   }
 
@@ -191,33 +201,51 @@ export class Lexer {
     }
   }
 
-  // TODO: add choice text
-  // private handleChoiceText() {
-  //   if (!this.isChoiceText()) {
-  //     return;
-  //   }
+  // TODO: add choice text content token
+  private handleChoiceText() {
+    if (this.isChoiceTextBound() && !this.isInChoiceText) {
+      this.isInChoiceText = true;
+      this.tokens.push(choiceTextBoundToken());
+      this.step(3);
 
-  //   let content = '```';
+      this.handleChoiceTextExtend();
+    } else if (this.isInChoiceText) {
+      this.handleChoiceTextExtend();
+    }
+  }
 
-  //   this.step(3);
+  private handleChoiceTextExtend(isInlined = false) {
+    if (this.isNewLine() || this.isComment() || this.isMultiComment()) {
+      return;
+    }
 
-  //   while (this.curChar) {
-  //     content += this.curChar;
+    let content = '';
+    let isChoiceTextEnding = false;
 
-  //     if (this.isNewLine()) {
-  //     }
+    while (this.curChar) {
+      content += this.curChar;
+      this.step();
 
-  //     if (this.isChoiceText()) {
-  //       content += '```';
-  //       break;
-  //     }
+      if (this.isNewLine() || this.isComment() || this.isMultiComment()) {
+        break;
+      }
 
-  //     this.step();
-  //   }
+      if (this.isChoiceTextBound()) {
+        isChoiceTextEnding = true;
+        break;
+      }
+    }
 
-  //   this.step();
-  //   this.tokens.push(choiceTextToken(content));
-  // }
+    this.step();
+    this.tokens.push(stringToken(content));
+
+    if (isChoiceTextEnding) {
+      this.isInChoiceText = false;
+
+      // Making token silent if it's inlined
+      this.tokens.push(choiceTextBoundToken(isInlined));
+    }
+  }
 
   private handleTag() {
     if (!this.isTag()) {
@@ -295,7 +323,12 @@ export class Lexer {
     let content = '';
 
     // The start of tag, choice tag, or new replica is the end of the current string
-    if (this.isReplicaBegin() || this.isTag() || this.isChoiceTag() || this.isEOF()) {
+    if (
+      this.isReplicaBegin() ||
+      this.isTag() ||
+      this.isChoiceTag() ||
+      this.isEOF()
+    ) {
       this.handleEndReplica();
       return;
     }
@@ -309,7 +342,12 @@ export class Lexer {
     while (this.curChar) {
       content += this.curChar;
 
-      if (this.isTag(1) || this.isChoiceTag(1) || this.isReplicaBegin(1) || this.isEOF(1)) {
+      if (
+        this.isTag(1) ||
+        this.isChoiceTag(1) ||
+        this.isReplicaBegin(1) ||
+        this.isEOF(1)
+      ) {
         isReplicaEnding = true;
         break;
       }
@@ -379,6 +417,7 @@ export class Lexer {
     this.prevIndent = spaces;
   }
 
+  // TODO: add a token for comment content
   private handleComment() {
     if (this.isInComment) {
       this.handleMultiCommentExtend();
@@ -389,7 +428,7 @@ export class Lexer {
     if (this.isMultiComment()) {
       this.isInComment = true;
       this.step(2); // skip over /*
-
+      
       this.tokens.push(multiCommentBeginToken());
       this.handleMultiCommentExtend();
       return;
@@ -413,27 +452,27 @@ export class Lexer {
     }
 
     if (this.isNewLine()) {
-      this.step();
       return;
     }
 
     // check next char
     while (this.curChar) {
+      content += this.curChar;
+
       if (this.isNewLine(1) || this.isMultiCommentEnd(1)) {
         break;
       }
-      
-      content += this.curChar;
+
       this.step();
     }
 
     // adding comment content
     this.tokens.push(stringToken(content));
-    
+
     if (this.isMultiCommentEnd(1)) {
       this.isInComment = false;
       this.tokens.push(multiCommentEndToken());
-      this.step();
+      this.step(2);
     }
 
     this.step();
@@ -464,6 +503,7 @@ export class Lexer {
       { type: TokenTypes.SECTION, fn: this.isSection },
       { type: TokenTypes.CHOICE, fn: this.isChoice },
       { type: TokenTypes.STRING, fn: this.isReplicaBegin },
+      { type: TokenTypes.CHOICE_TEXT_BOUND, fn: this.isChoiceTextBound },
     ];
 
     return tokens.find((info) => {
@@ -495,10 +535,10 @@ export class Lexer {
       return false;
     }
 
-    return this.isNotEscapingChar('+', offset) && this.peek(offset + 1) === ' ';
+    return this.isNotEscapingChar('+', offset);
   }
 
-  private isChoiceText(offset = 0) {
+  private isChoiceTextBound(offset = 0) {
     return (
       this.isNotEscapingChar('`', offset) &&
       this.peek(offset + 1) === '`' &&
@@ -507,7 +547,8 @@ export class Lexer {
   }
 
   private isReplicaBegin(offset = 0) {
-    return this.peek(offset) === '"' && this.peek(offset - 1) !== '\\';
+    return this.isNotEscapingChar('"', offset) && this.peek(offset + 1) === ' ';
+    // return this.peek(offset) === '"' && this.peek(offset - 1) !== '\\';
   }
 
   private isTag(offset = 0) {
@@ -523,19 +564,11 @@ export class Lexer {
   }
 
   private isMultiComment(offset = 0) {
-    return (
-      this.peek(offset - 1) !== '\\' &&
-      this.peek(offset) === '/' &&
-      this.peek(offset + 1) === '*'
-    );
+    return this.isNotEscapingChar('/', offset) && this.peek(offset + 1) === '*';
   }
 
   private isMultiCommentEnd(offset = 0) {
-    return (
-      this.peek(offset) === '/' &&
-      this.peek(offset - 1) === '*' &&
-      this.peek(offset - 2) !== '\\'
-    );
+    return this.isNotEscapingChar('*', offset) && this.peek(offset + 1) === '/';
   }
 
   private isNewLine(offset = 0) {
