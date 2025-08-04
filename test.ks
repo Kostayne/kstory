@@ -37,3 +37,22 @@ koko
   # even with a regular comment
   /* and multi comment */ Choice text continue.
   ```
+
+# Function call tests
+@call:updateInventory()
+@call:setPlayerName("John")
+@call:setLevel(10)
+@call:sendMessage("Hello", "World")
+@call:complexFunction("param1", "param2", "param3")
+
+" Test call in replica: {call:getUserName()}
+" Test call with params: {call:getMessage("Hello")}
+" Test call with multiple params: {call:formatString("Name", "Value")}
+
+# Test escaping
+@call:functionName\(\)
+" Escaped call: {call:functionName\(\)}
+
+# Test calls in comments (should be ignored)
+# @call:functionName()
+# @call:setPlayerName("John")

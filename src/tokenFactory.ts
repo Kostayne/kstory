@@ -142,3 +142,17 @@ export function errorToken(val: string): Token<string> {
     value: val,
   };
 }
+
+export function callToken(functionName: string): Token<string> {
+  return {
+    type: TokenTypes.CALL,
+    value: functionName,
+  };
+}
+
+export function callArgumentToken(argument: string): Token<string> {
+  return {
+    type: TokenTypes.CALL_ARGUMENT,
+    value: argument,
+  };
+}

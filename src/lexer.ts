@@ -1,11 +1,14 @@
 import { spaceRegex } from './regex';
 import { type Token, type TokenType, TokenTypes } from './token';
 import {
+  callArgumentToken,
+  callToken,
   choiceTagToken,
   choiceTextBoundToken,
   choiceTextToken,
   choiceToken,
   commentContentToken,
+  commentToken,
   dedentToken,
   eofToken,
   gotoToken,
@@ -19,7 +22,7 @@ import {
   sectionToken,
   stringToken,
   tagToken,
-  tagValueToken
+  tagValueToken,
 } from './tokenFactory';
 
 const INDENT_WIDTH = 2;
@@ -60,12 +63,15 @@ export class Lexer {
   }
 
   private handleCurrentToken() {
-    this.handleNewLine();
     this.handleIndent();
+    this.handleNewLine();
     this.handleComment();
 
-    if (!this.isInComment) {
-      if (!this.isExtendingStr && !this.isInChoiceText) {
+    if (!this.isInComment) 
+    {
+      if (!this.isExtendingStr && !this.isInChoiceText) 
+      {
+        this.handleCall();
         this.handleChoiceTag();
         this.handleTag();
         this.handleSection();
@@ -77,7 +83,8 @@ export class Lexer {
       this.handleString();
     }
 
-    if (!this.isInComment && !this.isExtendingStr && !this.isInChoiceText) {
+    if (!this.isInComment && !this.isExtendingStr && !this.isInChoiceText) 
+    {
       this.handleError();
     }
   }
@@ -115,7 +122,7 @@ export class Lexer {
       this.step();
     }
 
-    if (content.length > 0) {
+    if (content.trim().length > 0) {
       this.tokens.push({
         type: TokenTypes.ERROR,
         value: content,
@@ -291,6 +298,83 @@ export class Lexer {
     }
   }
 
+  private handleCall() {
+    if (!this.isCall()) {
+      return;
+    }
+
+    // Skip over @call:
+    this.step(6);
+    
+    // Read function name
+    let functionName = '';
+    while (this.curChar && this.curChar !== '(' && this.curChar !== ' ') {
+      functionName += this.curChar;
+      this.step();
+    }
+
+    // Handle escaped parentheses in function name
+    if (this.curChar === '(' && this.peek(-1) === '\\') {
+      // This is an escaped parenthesis, treat as part of function name
+      functionName += this.curChar;
+      this.step();
+      
+      // Continue reading until we find the real function call
+      while (this.curChar && this.curChar !== '(' && this.curChar !== ' ') {
+        functionName += this.curChar;
+        this.step();
+      }
+    }
+
+    // Create call token first
+    this.tokens.push(callToken(functionName));
+
+    if (this.curChar === '(') {
+      this.step(); // skip over (
+      this.handleCallArguments();
+      
+      // Skip over closing )
+      this.step();
+    }
+  }
+
+  private handleCallArguments() {
+    let depth = 1;
+    let currentArg = '';
+    let inQuotes = false;
+
+    while (this.curChar && depth > 0) {
+      if (this.curChar === '"' && this.peek(-1) !== '\\') {
+        inQuotes = !inQuotes;
+      }
+
+      if (!inQuotes) {
+        if (this.curChar === '(' && this.peek(-1) !== '\\') {
+          depth++;
+        } else if (this.curChar === ')' && this.peek(-1) !== '\\') {
+          depth--;
+          if (depth === 0) {
+            break;
+          }
+        } else if (this.curChar === ',' && depth === 1) {
+          if (currentArg.trim().length > 0) {
+            this.tokens.push(callArgumentToken(currentArg.trim()));
+          }
+          currentArg = '';
+          this.step();
+          continue;
+        }
+      }
+
+      currentArg += this.curChar;
+      this.step();
+    }
+
+    if (currentArg.trim().length > 0) {
+      this.tokens.push(callArgumentToken(currentArg.trim()));
+    }
+  }
+
   private getTagName() {
     let tagName = '';
 
@@ -337,7 +421,53 @@ export class Lexer {
       this.handleNewReplica();
     } else if (this.isExtendingStr) {
       this.handleExtendReplica();
+    } else {
+      // Check for inline calls in text
+      this.handleInlineCall();
     }
+  }
+
+  private handleInlineCall(): string {
+    if (!this.isInlineCall()) {
+      return '';
+    }
+    let result = '{call:';
+    this.step(6);
+    // Read function name
+    while (this.curChar && this.curChar !== '(' && this.curChar !== '}') {
+      result += this.curChar;
+      this.step();
+    }
+    if (this.curChar === '(') {
+      result += this.curChar;
+      this.step();
+      let depth = 1;
+      while (this.curChar && depth > 0) {
+        result += this.curChar;
+        if (this.curChar === '(' && this.peek(-1) !== '\\') {
+          depth++;
+        } else if ((this.curChar as string) === ')' && this.peek(-1) !== '\\') {
+          depth--;
+        }
+        this.step();
+      }
+    }
+    if (this.curChar === '}') {
+      result += '}';
+      this.step();
+    }
+    return result;
+  }
+
+  private isInlineCall(offset = 0) {
+    return (
+      this.isNotEscapingChar('{', offset) &&
+      this.peek(offset + 1) === 'c' &&
+      this.peek(offset + 2) === 'a' &&
+      this.peek(offset + 3) === 'l' &&
+      this.peek(offset + 4) === 'l' &&
+      this.peek(offset + 5) === ':'
+    );
   }
 
   private handleNewReplica() {
@@ -362,6 +492,18 @@ export class Lexer {
       return;
     }
 
+          // Check for inline calls in replica text
+      if (this.isInlineCall()) {
+        // Add any accumulated content first
+        if (content.trim().length > 0) {
+          this.tokens.push(stringToken(content));
+          this.lastStringTokenIndex = this.tokens.length - 1;
+        }
+        
+        content += this.handleInlineCall();
+        // Don't return, continue processing the replica
+      }
+
     // skipping other tokens such as comments
     if (this.getTokenType(0)) {
       return;
@@ -369,6 +511,19 @@ export class Lexer {
 
     let isReplicaEnding = false;
     while (this.curChar) {
+      // Check for inline calls
+      if (this.isInlineCall()) {
+        // Add accumulated content first
+        if (content.trim().length > 0) {
+          this.tokens.push(stringToken(content));
+          this.lastStringTokenIndex = this.tokens.length - 1;
+        }
+        
+        // Handle inline call as part of the replica
+        content += this.handleInlineCall();
+        continue;
+      }
+
       content += this.curChar;
 
       if (
@@ -389,8 +544,12 @@ export class Lexer {
     }
 
     this.step();
-    this.tokens.push(stringToken(content));
-    this.lastStringTokenIndex = this.tokens.length - 1;
+    
+    // Only create string token if content is not empty
+    if (content.trim().length > 0) {
+      this.tokens.push(stringToken(content));
+      this.lastStringTokenIndex = this.tokens.length - 1;
+    }
 
     if (isReplicaEnding) {
       this.handleEndReplica();
@@ -478,7 +637,7 @@ export class Lexer {
     }
     
     if (content.length > 1) { // More than just '#'
-      this.tokens.push(commentContentToken(content));
+      this.tokens.push(commentToken(content));
     }
   }
 
@@ -546,6 +705,7 @@ export class Lexer {
       { type: TokenTypes.CHOICE, fn: this.isChoice },
       { type: TokenTypes.STRING, fn: this.isReplicaBegin },
       { type: TokenTypes.CHOICE_TEXT_BOUND, fn: this.isChoiceTextBound },
+      { type: TokenTypes.CALL, fn: this.isCall },
     ];
 
     return tokens.find((info) => {
@@ -669,5 +829,16 @@ export class Lexer {
 
   private peek(pos = 0) {
     return this.source[this.position + pos];
+  }
+
+  private isCall(offset = 0) {
+    return (
+      this.isNotEscapingChar('@', offset) &&
+      this.peek(offset + 1) === 'c' &&
+      this.peek(offset + 2) === 'a' &&
+      this.peek(offset + 3) === 'l' &&
+      this.peek(offset + 4) === 'l' &&
+      this.peek(offset + 5) === ':'
+    );
   }
 }

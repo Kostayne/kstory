@@ -34,6 +34,10 @@ export const TokenTypes = {
   STRING: 'STRING', // Text
 
   ERROR: 'ERROR', // for unknown tokens
+
+  // function calls
+  CALL: 'CALL', // @call:functionName()
+  CALL_ARGUMENT: 'CALL_ARGUMENT', // function parameter
 } as const
 
 export type TokenType = typeof TokenTypes[keyof typeof TokenTypes]
