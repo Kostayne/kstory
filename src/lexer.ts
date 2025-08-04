@@ -26,6 +26,15 @@ import {
 } from './tokenFactory';
 
 const INDENT_WIDTH = 2;
+const CALL_PREFIX_LENGTH = 6; // @call:
+const MULTI_COMMENT_START_LENGTH = 2; // /*
+const MULTI_COMMENT_END_LENGTH = 2; // */
+const CHOICE_PREFIX_LENGTH = 2; // + 
+const REPLICA_PREFIX_LENGTH = 2; // " 
+const SECTION_PREFIX_LENGTH = 3; // == 
+const GOTO_PREFIX_LENGTH = 3; // -> or =>
+const CHOICE_TEXT_BOUND_LENGTH = 3; // ```
+const INLINE_CALL_PREFIX_LENGTH = 6; // {call:
 
 export class Lexer {
   private position = 0;
@@ -67,24 +76,31 @@ export class Lexer {
     this.handleNewLine();
     this.handleComment();
 
-    if (!this.isInComment) 
-    {
-      if (!this.isExtendingStr && !this.isInChoiceText) 
-      {
-        this.handleCall();
-        this.handleChoiceTag();
-        this.handleTag();
-        this.handleSection();
-        this.handleGoto();
-        this.handleChoice();
-      }
+    if (this.isInComment) return;
 
-      this.handleChoiceText();
-      this.handleString();
+    this.handleNonCommentTokens();
+    this.handleErrorIfNeeded();
+  }
+
+  private handleNonCommentTokens() {
+    if (!this.isExtendingStr && !this.isInChoiceText) {
+      this.handleStructuralTokens();
     }
+    this.handleChoiceText();
+    this.handleString();
+  }
 
-    if (!this.isInComment && !this.isExtendingStr && !this.isInChoiceText) 
-    {
+  private handleStructuralTokens() {
+    this.handleCall();
+    this.handleChoiceTag();
+    this.handleTag();
+    this.handleSection();
+    this.handleGoto();
+    this.handleChoice();
+  }
+
+  private handleErrorIfNeeded() {
+    if (!this.isInComment && !this.isExtendingStr && !this.isInChoiceText) {
       this.handleError();
     }
   }
@@ -97,7 +113,7 @@ export class Lexer {
     const content = `${this.curChar}> `;
 
     // skipping over the '-> '
-    this.step(3);
+    this.step(GOTO_PREFIX_LENGTH);
     this.tokens.push(gotoToken(content));
 
     this.handleIdentifier();
@@ -137,7 +153,7 @@ export class Lexer {
 
     // skipping over the '+ '
     if (this.peek(1) === ' ') {
-      this.step(2);
+      this.step(CHOICE_PREFIX_LENGTH);
       this.tokens.push(choiceToken('+ '));
     } else {
       this.step(1);
@@ -164,7 +180,7 @@ export class Lexer {
     }
 
     // skipping over the '== '
-    this.step(3);
+    this.step(SECTION_PREFIX_LENGTH);
     this.tokens.push(sectionToken());
 
     this.handleSectionName();
@@ -224,63 +240,77 @@ export class Lexer {
 
   private handleChoiceTextExtend(isInlined = false) {
     let content = '';
-    let isChoiceTextEnding = false;
 
     while (this.curChar) {
-      // Handle newline
-      if (this.isNewLine()) {
-        if (content.length > 0) {
-          this.tokens.push(choiceTextToken(content));
-          content = '';
-        }
-        this.tokens.push(newLineToken());
-        this.step();
-        continue;
+      if (this.isChoiceTextEnding()) {
+        this.finalizeChoiceText(content, isInlined);
+        return;
       }
 
-      // Handle single line comment
-      if (this.isComment()) {
-        if (content.length > 0) {
-          this.tokens.push(choiceTextToken(content));
-          content = '';
-        }
-        this.handleCommentContent();
-        continue;
-      }
-
-      // Handle multiline comment
-      if (this.isMultiComment()) {
-        if (content.length > 0) {
-          this.tokens.push(choiceTextToken(content));
-          content = '';
-        }
-        this.isInComment = true;
-        this.step(2); // skip over /*
-        this.tokens.push(multiCommentBeginToken());
-        this.handleMultiCommentExtend();
-        continue;
-      }
-
-      // Handle choice text ending
-      if (this.isChoiceTextBound()) {
-        isChoiceTextEnding = true;
-        break;
-      }
-
-      content += this.curChar;
-      this.step();
+      content = this.processChoiceTextContent(content);
     }
 
+    this.finalizeChoiceText(content, isInlined);
+  }
+
+  private isChoiceTextEnding(): boolean {
+    return this.isChoiceTextBound();
+  }
+
+  private processChoiceTextContent(content: string): string {
+    if (this.isNewLine()) {
+      return this.handleChoiceTextNewline(content);
+    }
+
+    if (this.isComment()) {
+      return this.handleChoiceTextComment(content);
+    }
+
+    if (this.isMultiComment()) {
+      return this.handleChoiceTextMultiComment(content);
+    }
+
+    content += this.curChar;
+    this.step();
+    return content;
+  }
+
+  private handleChoiceTextNewline(content: string): string {
+    if (content.length > 0) {
+      this.tokens.push(choiceTextToken(content));
+    }
+    this.tokens.push(newLineToken());
+    this.step();
+    return '';
+  }
+
+  private handleChoiceTextComment(content: string): string {
+    if (content.length > 0) {
+      this.tokens.push(choiceTextToken(content));
+    }
+    this.handleCommentContent();
+    return '';
+  }
+
+  private handleChoiceTextMultiComment(content: string): string {
+    if (content.length > 0) {
+      this.tokens.push(choiceTextToken(content));
+    }
+    this.isInComment = true;
+    this.step(2); // skip over /*
+    this.tokens.push(multiCommentBeginToken());
+    this.handleMultiCommentExtend();
+    return '';
+  }
+
+  private finalizeChoiceText(content: string, isInlined: boolean): void {
     if (content.length > 0) {
       this.tokens.push(choiceTextToken(content));
     }
 
-    if (isChoiceTextEnding) {
-      this.isInChoiceText = false;
-      this.step(3); // skip over ```
-      // Making token silent if it's inlined
-      this.tokens.push(choiceTextBoundToken(isInlined));
-    }
+    this.isInChoiceText = false;
+          this.step(CHOICE_TEXT_BOUND_LENGTH); // skip over ```
+    this.tokens.push(choiceTextBoundToken(isInlined));
   }
 
   private handleTag() {
@@ -304,7 +334,7 @@ export class Lexer {
     }
 
     // Skip over @call:
-    this.step(6);
+    this.step(CALL_PREFIX_LENGTH);
     
     // Read function name
     let functionName = '';
@@ -432,7 +462,7 @@ export class Lexer {
       return '';
     }
     let result = '{call:';
-    this.step(6);
+    this.step(INLINE_CALL_PREFIX_LENGTH);
     // Read function name
     while (this.curChar && this.curChar !== '(' && this.curChar !== '}') {
       result += this.curChar;
@@ -471,7 +501,7 @@ export class Lexer {
   }
 
   private handleNewReplica() {
-    this.step(2);
+    this.step(REPLICA_PREFIX_LENGTH);
     this.isExtendingStr = true;
     this.tokens.push(replicaBeginToken());
 
@@ -481,57 +511,59 @@ export class Lexer {
   private handleExtendReplica() {
     let content = '';
 
-    // The start of tag, choice tag, or new replica is the end of the current string
-    if (
-      this.isReplicaBegin() ||
-      this.isTag() ||
-      this.isChoiceTag() ||
-      this.isEOF()
-    ) {
+    if (this.shouldEndReplica()) {
       this.handleEndReplica();
       return;
     }
 
-          // Check for inline calls in replica text
-      if (this.isInlineCall()) {
-        // Add any accumulated content first
-        if (content.trim().length > 0) {
-          this.tokens.push(stringToken(content));
-          this.lastStringTokenIndex = this.tokens.length - 1;
-        }
-        
-        content += this.handleInlineCall();
-        // Don't return, continue processing the replica
-      }
+    content = this.handleInlineCallInReplica(content);
 
-    // skipping other tokens such as comments
     if (this.getTokenType(0)) {
       return;
     }
 
+    content = this.processReplicaContent(content);
+
+    this.finalizeReplicaContent(content);
+  }
+
+  private shouldEndReplica(): boolean {
+    return (
+      this.isReplicaBegin() ||
+      this.isTag() ||
+      this.isChoiceTag() ||
+      this.isEOF()
+    );
+  }
+
+  private handleInlineCallInReplica(content: string): string {
+    if (this.isInlineCall()) {
+      this.addStringTokenIfNotEmpty(content);
+      return this.handleInlineCall();
+    }
+    return content;
+  }
+
+  private addStringTokenIfNotEmpty(content: string): void {
+    if (content.trim().length > 0) {
+      this.tokens.push(stringToken(content));
+      this.lastStringTokenIndex = this.tokens.length - 1;
+    }
+  }
+
+  private processReplicaContent(content: string): string {
     let isReplicaEnding = false;
+
     while (this.curChar) {
-      // Check for inline calls
       if (this.isInlineCall()) {
-        // Add accumulated content first
-        if (content.trim().length > 0) {
-          this.tokens.push(stringToken(content));
-          this.lastStringTokenIndex = this.tokens.length - 1;
-        }
-        
-        // Handle inline call as part of the replica
-        content += this.handleInlineCall();
+        this.addStringTokenIfNotEmpty(content);
+        content = this.handleInlineCall();
         continue;
       }
 
       content += this.curChar;
 
-      if (
-        this.isTag(1) ||
-        this.isChoiceTag(1) ||
-        this.isReplicaBegin(1) ||
-        this.isEOF(1)
-      ) {
+      if (this.isReplicaEnding()) {
         isReplicaEnding = true;
         break;
       }
@@ -544,15 +576,22 @@ export class Lexer {
     }
 
     this.step();
-    
-    // Only create string token if content is not empty
+    return content;
+  }
+
+  private isReplicaEnding(): boolean {
+    return (
+      this.isTag(1) ||
+      this.isChoiceTag(1) ||
+      this.isReplicaBegin(1) ||
+      this.isEOF(1)
+    );
+  }
+
+  private finalizeReplicaContent(content: string): void {
     if (content.trim().length > 0) {
       this.tokens.push(stringToken(content));
       this.lastStringTokenIndex = this.tokens.length - 1;
-    }
-
-    if (isReplicaEnding) {
-      this.handleEndReplica();
     }
   }
 
@@ -614,7 +653,7 @@ export class Lexer {
     // new multiline comment
     if (this.isMultiComment()) {
       this.isInComment = true;
-      this.step(2); // skip over /*
+      this.step(MULTI_COMMENT_START_LENGTH); // skip over /*
       
       this.tokens.push(multiCommentBeginToken());
       this.handleMultiCommentExtend();
@@ -648,7 +687,7 @@ export class Lexer {
     if (this.isMultiCommentEnd()) {
       this.isInComment = false;
       this.tokens.push(multiCommentEndToken());
-      this.step(2); // skip over */
+      this.step(MULTI_COMMENT_END_LENGTH); // skip over */
       return;
     }
 
