@@ -1,0 +1,30 @@
+{
+  "name": "kstory-language-client",
+  "displayName": "KStory Language Client",
+  "description": "Language client for KStory (.ks) files",
+  "publisher": "local",
+  "version": "0.0.1",
+  "engines": { "vscode": "^1.84.0" },
+  "activationEvents": ["onLanguage:kstory"],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "languages": [
+      { "id": "kstory", "aliases": ["KStory"], "extensions": [".ks"] }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "esbuild ./src/extension.ts --bundle --platform=node --target=node18 --external:vscode --outfile=dist/extension.js",
+    "build": "esbuild ./src/extension.ts --bundle --platform=node --target=node18 --external:vscode --sourcemap --outfile=dist/extension.js",
+    "watch": "esbuild ./src/extension.ts --bundle --platform=node --target=node18 --external:vscode --sourcemap --outfile=dist/extension.js --watch"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "@types/vscode": "^1.84.0",
+    "esbuild": "^0.21.5",
+    "vscode": "^1.1.37",
+    "vscode-languageclient": "^9.0.1"
+  },
+  "dependencies": {}
+}
+
+

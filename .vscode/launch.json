@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run KStory Client",
+      "type": "extensionHost",
+      "request": "launch",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/tools/vscode-kstory",
+        "--new-window",
+        "${workspaceFolder}/test.ks"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/tools/vscode-kstory/dist/**/*.js"
+      ],
+      "preLaunchTask": "npm: build (kstory-language-client)"
+    }
+  ]
+}
+
+

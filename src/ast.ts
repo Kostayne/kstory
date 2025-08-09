@@ -6,6 +6,8 @@ export type SourcePosition = {
 export type AstTag = {
   name: string
   value?: string
+  position?: SourcePosition
+  endPosition?: SourcePosition
 }
 
 export type AstGoto = {

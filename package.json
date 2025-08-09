@@ -1,11 +1,17 @@
 {
   "scripts": {
     "main": "bun run src/main.ts",
-    "test": "bun test"
+    "test": "bun test",
+    "build:lsp": "esbuild lsp/server.ts --bundle --platform=node --target=node18 --format=cjs --outfile=dist/lsp/server.js",
+    "lsp": "node dist/lsp/server.js",
+    "lsp:node": "node dist/lsp/server.js"
   },
   "dependencies": {},
   "devDependencies": {
     "@biomejs/biome": "2.1.1",
-    "@types/node": "^24.0.13"
+    "@types/node": "^24.0.13",
+    "esbuild": "^0.25.8",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.8"
   }
 }

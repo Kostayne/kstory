@@ -20,15 +20,40 @@ export function getParserIssues(): ParserIssue[] {
   return lastParserIssues
 }
 
-function addParserIssue(issue: ParserIssue) {
+// Internal helper: push issue to provided sink or fallback to legacy global buffer
+function addIssue(sink: ParserIssue[] | undefined, issue: ParserIssue) {
+  if (sink) {
+    sink.push(issue)
+    return
+  }
   lastParserIssues.push(issue)
 }
 
 export type ParseResult = { program: AstProgram; issues: ParserIssue[] }
 
-export function parseProgramFromTokens(tokens: Token<unknown>[]): ParseResult {
-  const program = buildAstFromTokens(tokens)
-  return { program, issues: getParserIssues() }
+export function parseProgramFromTokens(tokens: Token<unknown>[], issues?: ParserIssue[]): ParseResult {
+  const program = buildAstFromTokens(tokens, issues)
+  return { program, issues: issues ?? getParserIssues() }
+}
+
+// Convenience: full parse from raw source using the project's Lexer
+export function parseFromSource(source: string): ParseResult {
+  // Lazy import to avoid circular deps at module load time
+  const { Lexer } = require('./lexer') as typeof import('./lexer')
+  const lexer = new Lexer(source)
+  lexer.process()
+  const tokens = lexer.getTokens()
+  return parseProgramFromTokens(tokens)
+}
+
+export function parseAll(source: string): { tokens: Token<unknown>[]; program: AstProgram; issues: ParserIssue[] } {
+  const { Lexer } = require('./lexer') as typeof import('./lexer')
+  const lexer = new Lexer(source)
+  lexer.process()
+  const tokens = lexer.getTokens()
+  const issues: ParserIssue[] = []
+  const program = buildAstFromTokens(tokens, issues)
+  return { tokens, program, issues }
 }
 
 // Constants to avoid magic numbers
@@ -40,7 +65,7 @@ const GOTO_TOKENS_CONSUMED = 2
 // Parser entrypoint: builds AST from tokens. Will be expanded in next steps.
 // Builds a high-level AST with sections and flat statements.
 // At this stage, bodies contain only simple statements (Goto, Call, Replica).
-export const buildAstFromTokens = (allTokens: Token<unknown>[]): AstProgram => {
+export const buildAstFromTokens = (allTokens: Token<unknown>[], issues?: ParserIssue[]): AstProgram => {
   // start new parser issues buffer
   lastParserIssues = []
   const sections: AstProgram['sections'] = []
@@ -50,7 +75,7 @@ export const buildAstFromTokens = (allTokens: Token<unknown>[]): AstProgram => {
 
   if (sectionIndices.length === 0) {
     // No explicit sections → implicit main with parsed simple statements from whole file
-    const body = parseSimpleStatements(allTokens)
+    const body = parseSimpleStatements(allTokens, { collectIssues: true, issues })
     sections.push({ name: 'main', body, position: getTokenPosition(allTokens[0]), endPosition: getTokenEndPosition(allTokens[allTokens.length - 1]) })
     return { sections }
   }
@@ -63,8 +88,15 @@ export const buildAstFromTokens = (allTokens: Token<unknown>[]): AstProgram => {
   )
 
   if (hasPreludeContent) {
-    const body = parseSimpleStatements(prelude)
-    sections.push({ name: 'main', body })
+    const body = parseSimpleStatements(prelude, { collectIssues: true, issues })
+    const preludeStartTok = prelude[0] ?? allTokens[0]
+    const preludeEndTok = allTokens[Math.max(0, sectionIndices[0] - 1)]
+    sections.push({
+      name: 'main',
+      body,
+      position: getTokenPosition(preludeStartTok),
+      endPosition: getTokenEndPosition(preludeEndTok),
+    })
   }
 
   // Collect explicit sections names (identifier after SECTION)
@@ -74,7 +106,7 @@ export const buildAstFromTokens = (allTokens: Token<unknown>[]): AstProgram => {
     const nameTok = allTokens[idx + 1]
 
     if (!nameTok || nameTok.type !== TokenTypes.IDENTIFIER) {
-      addParserIssue({
+      addIssue(issues, {
         kind: 'Error',
         message: 'Expected section name (IDENTIFIER) after SECTION token',
         position: getTokenPosition(sectionTok),
@@ -86,7 +118,7 @@ export const buildAstFromTokens = (allTokens: Token<unknown>[]): AstProgram => {
 
     const name = String(nameTok.value ?? '')
     const sectionWindow = allTokens.slice(idx + SECTION_HEADER_TOKEN_COUNT, nextIdx)
-    const body = parseSimpleStatements(sectionWindow)
+    const body = parseSimpleStatements(sectionWindow, { collectIssues: true, issues })
     sections.push({ name, body, position: getTokenPosition(sectionTok), endPosition: getTokenEndPosition(allTokens[nextIdx - 1]) })
   }
 
@@ -101,7 +133,7 @@ export const buildAstFromTokens = (allTokens: Token<unknown>[]): AstProgram => {
 // - Accumulate leading @tags and @@choice_tags in buffers (pendingTags / pendingChoiceTags)
 // - Skip non-semantic tokens (newline/comments) between tags and the statement
 // - Attach the accumulated tags to the next parsed statement, then reset buffers
-type ParseOptions = { collectIssues?: boolean }
+type ParseOptions = { collectIssues?: boolean; issues?: ParserIssue[] }
 
 export const parseSimpleStatements = (tokens: Token<unknown>[], options: ParseOptions = { collectIssues: true }): AstStatement[] => {
   const result: AstStatement[] = []
@@ -143,7 +175,7 @@ export const parseSimpleStatements = (tokens: Token<unknown>[], options: ParseOp
 
     // Parse choice statements (text + optional body). Consumes choice-related tokens
     if (currentToken.type === TokenTypes.CHOICE) {
-      const { node, nextIndex } = parseChoiceAt(tokens, currentIndex, pendingTags, pendingChoiceTags)
+      const { node, nextIndex } = parseChoiceAt(tokens, currentIndex, pendingTags, pendingChoiceTags, options.issues)
       result.push(node)
       pendingTags = []
       pendingChoiceTags = []
@@ -155,7 +187,7 @@ export const parseSimpleStatements = (tokens: Token<unknown>[], options: ParseOp
     if (currentToken.type === TokenTypes.GOTO) {
       const nextToken = tokens[currentIndex + 1]
       if (!nextToken || nextToken.type !== TokenTypes.IDENTIFIER) {
-        if (options.collectIssues) addParserIssue({
+        if (options.collectIssues) addIssue(options.issues, {
           kind: 'Error',
           message: 'Goto must be followed by IDENTIFIER',
           position: getTokenPosition(currentToken),
@@ -190,7 +222,7 @@ export const parseSimpleStatements = (tokens: Token<unknown>[], options: ParseOp
 
       // If we see a NEWLINE right after CALL (no args and likely broken), issue a warning and continue
       if (callArguments.length === 0 && tokens[argumentIndex]?.type === TokenTypes.NEWLINE) {
-        if (options.collectIssues) addParserIssue({
+        if (options.collectIssues) addIssue(options.issues, {
           kind: 'Warning',
           message: `Empty or malformed call: ${functionName}()`,
           position: getTokenPosition(currentToken),
@@ -227,7 +259,7 @@ export const parseSimpleStatements = (tokens: Token<unknown>[], options: ParseOp
 
       const fullText = stringTokens.map(t => String(t.value ?? '')).join('')
       const pieces = buildTextPieces(stringTokens)
-      const segments = splitTextIntoSegmentsWithPositions(fullText, pieces)
+      const segments = splitTextIntoSegmentsWithPositions(fullText, pieces, options.issues)
 
       const endTok = tokens[Math.min(scanIndex, tokens.length - 1)]
       const replicaNode = {
@@ -269,12 +301,17 @@ export const collectLeadingTags = (
     const maybeValue = tokens[index + 1]
 
     if (maybeValue && maybeValue.type === TokenTypes.TAG_VALUE) {
-      collected.push({ name, value: String(maybeValue.value ?? '') })
+      collected.push({
+        name,
+        value: String(maybeValue.value ?? ''),
+        position: getTokenPosition(t),
+        endPosition: getTokenEndPosition(maybeValue),
+      })
       index += 2
       continue
     }
 
-    collected.push({ name })
+    collected.push({ name, position: getTokenPosition(t), endPosition: getTokenEndPosition(t) })
     index += 1
   }
 
@@ -299,12 +336,17 @@ export const collectLeadingChoiceTags = (
     const maybeValue = tokens[index + 1]
 
     if (maybeValue && maybeValue.type === TokenTypes.TAG_VALUE) {
-      collected.push({ name, value: String(maybeValue.value ?? '') })
+      collected.push({
+        name,
+        value: String(maybeValue.value ?? ''),
+        position: getTokenPosition(t),
+        endPosition: getTokenEndPosition(maybeValue),
+      })
       index += 2
       continue
     }
 
-    collected.push({ name })
+    collected.push({ name, position: getTokenPosition(t), endPosition: getTokenEndPosition(t) })
     index += 1
   }
 
@@ -412,6 +454,7 @@ function mapSpanToPositions(start: number, end: number, pieces: TextPiece[]): { 
 function splitTextIntoSegmentsWithPositions(
   text: string,
   pieces: TextPiece[],
+  issues?: ParserIssue[],
 ): Array<AstTextSegment | AstInlineCallSegment> {
   const out: Array<AstTextSegment | AstInlineCallSegment> = []
   let globalOffset = 0
@@ -452,7 +495,7 @@ function splitTextIntoSegmentsWithPositions(
     // If unterminated, report issue and treat as plain text
     if (i > text.length) {
       const span = mapSpanToPositions(idx, text.length, pieces)
-      addParserIssue({
+      addIssue(issues, {
         kind: 'Warning',
         message: 'Unterminated inline call',
         position: span.start,
@@ -545,6 +588,7 @@ function parseChoiceAt(
   startIndex: number,
   pendingTags: AstTag[],
   pendingChoiceTags: AstTag[],
+  issues?: ParserIssue[],
 ): { node: AstStatement; nextIndex: number } {
   let index = startIndex + 1 // skip CHOICE
   let text: string | undefined
@@ -595,7 +639,7 @@ function parseChoiceAt(
     richText = parts.join('')
 
     if (!foundClosingBound) {
-      addParserIssue({
+      addIssue(issues, {
         kind: 'Warning',
         message: 'Unterminated choice text block (missing closing ```)',
         position: getTokenPosition(blockStartTok),
