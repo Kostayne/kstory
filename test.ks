@@ -56,3 +56,7 @@ koko
 # Test calls in comments (should be ignored)
 # @call:functionName()
 # @call:setPlayerName("John")
+
+== test_section
+
+-> test_section
