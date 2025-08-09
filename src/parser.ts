@@ -8,6 +8,29 @@ export class ParseError extends Error {
   }
 }
 
+export type ParserIssue = {
+  kind: 'Error' | 'Warning'
+  message: string
+  position?: SourcePosition
+  endPosition?: SourcePosition
+}
+
+let lastParserIssues: ParserIssue[] = []
+export function getParserIssues(): ParserIssue[] {
+  return lastParserIssues
+}
+
+function addParserIssue(issue: ParserIssue) {
+  lastParserIssues.push(issue)
+}
+
+export type ParseResult = { program: AstProgram; issues: ParserIssue[] }
+
+export function parseProgramFromTokens(tokens: Token<unknown>[]): ParseResult {
+  const program = buildAstFromTokens(tokens)
+  return { program, issues: getParserIssues() }
+}
+
 // Constants to avoid magic numbers
 // Number of tokens that form a section header: [SECTION, IDENTIFIER]
 const SECTION_HEADER_TOKEN_COUNT = 2
@@ -18,6 +41,8 @@ const GOTO_TOKENS_CONSUMED = 2
 // Builds a high-level AST with sections and flat statements.
 // At this stage, bodies contain only simple statements (Goto, Call, Replica).
 export const buildAstFromTokens = (allTokens: Token<unknown>[]): AstProgram => {
+  // start new parser issues buffer
+  lastParserIssues = []
   const sections: AstProgram['sections'] = []
 
   // Find explicit sections by positions of SECTION tokens
@@ -44,17 +69,25 @@ export const buildAstFromTokens = (allTokens: Token<unknown>[]): AstProgram => {
 
   // Collect explicit sections names (identifier after SECTION)
   for (const idx of sectionIndices) {
+    const sectionTok = allTokens[idx]
+    const nextIdx = sectionIndices.find((v: number) => v > idx) ?? allTokens.length
     const nameTok = allTokens[idx + 1]
 
     if (!nameTok || nameTok.type !== TokenTypes.IDENTIFIER) {
-      throw new ParseError('Expected section name (IDENTIFIER) after SECTION token')
+      addParserIssue({
+        kind: 'Error',
+        message: 'Expected section name (IDENTIFIER) after SECTION token',
+        position: getTokenPosition(sectionTok),
+        endPosition: getTokenEndPosition(sectionTok),
+      })
+      // skip this malformed section body and continue with next
+      continue
     }
 
     const name = String(nameTok.value ?? '')
-    const nextIdx = sectionIndices.find((v: number) => v > idx) ?? allTokens.length
     const sectionWindow = allTokens.slice(idx + SECTION_HEADER_TOKEN_COUNT, nextIdx)
     const body = parseSimpleStatements(sectionWindow)
-    sections.push({ name, body, position: getTokenPosition(allTokens[idx]), endPosition: getTokenEndPosition(allTokens[nextIdx - 1]) })
+    sections.push({ name, body, position: getTokenPosition(sectionTok), endPosition: getTokenEndPosition(allTokens[nextIdx - 1]) })
   }
 
   return { sections }
@@ -68,7 +101,9 @@ export const buildAstFromTokens = (allTokens: Token<unknown>[]): AstProgram => {
 // - Accumulate leading @tags and @@choice_tags in buffers (pendingTags / pendingChoiceTags)
 // - Skip non-semantic tokens (newline/comments) between tags and the statement
 // - Attach the accumulated tags to the next parsed statement, then reset buffers
-export const parseSimpleStatements = (tokens: Token<unknown>[]): AstStatement[] => {
+type ParseOptions = { collectIssues?: boolean }
+
+export const parseSimpleStatements = (tokens: Token<unknown>[], options: ParseOptions = { collectIssues: true }): AstStatement[] => {
   const result: AstStatement[] = []
   let currentIndex = 0
   // Regular tags meant for the very next statement
@@ -120,7 +155,15 @@ export const parseSimpleStatements = (tokens: Token<unknown>[]): AstStatement[] 
     if (currentToken.type === TokenTypes.GOTO) {
       const nextToken = tokens[currentIndex + 1]
       if (!nextToken || nextToken.type !== TokenTypes.IDENTIFIER) {
-        throw new ParseError('Goto must be followed by IDENTIFIER')
+        if (options.collectIssues) addParserIssue({
+          kind: 'Error',
+          message: 'Goto must be followed by IDENTIFIER',
+          position: getTokenPosition(currentToken),
+          endPosition: getTokenEndPosition(currentToken),
+        })
+        // sync: skip to end of line/body
+        currentIndex++
+        continue
       }
       result.push({
         kind: 'Goto',
@@ -143,6 +186,16 @@ export const parseSimpleStatements = (tokens: Token<unknown>[]): AstStatement[] 
       while (argumentIndex < tokens.length && tokens[argumentIndex].type === TokenTypes.CALL_ARGUMENT) {
         callArguments.push(String(tokens[argumentIndex].value ?? ''))
         argumentIndex++
+      }
+
+      // If we see a NEWLINE right after CALL (no args and likely broken), issue a warning and continue
+      if (callArguments.length === 0 && tokens[argumentIndex]?.type === TokenTypes.NEWLINE) {
+        if (options.collectIssues) addParserIssue({
+          kind: 'Warning',
+          message: `Empty or malformed call: ${functionName}()`,
+          position: getTokenPosition(currentToken),
+          endPosition: getTokenEndPosition(tokens[Math.max(currentIndex, argumentIndex)]),
+        })
       }
 
       result.push({
@@ -396,9 +449,15 @@ function splitTextIntoSegmentsWithPositions(
       i++
     }
 
-    // If unterminated, treat as plain text
+    // If unterminated, report issue and treat as plain text
     if (i > text.length) {
       const span = mapSpanToPositions(idx, text.length, pieces)
+      addParserIssue({
+        kind: 'Warning',
+        message: 'Unterminated inline call',
+        position: span.start,
+        endPosition: span.end,
+      })
       out.push({ kind: 'Text', text: text.slice(idx), position: span.start, endPosition: span.end })
       break
     }
@@ -505,8 +564,10 @@ function parseChoiceAt(
     }
   } else if (tokens[index] && tokens[index].type === TokenTypes.CHOICE_TEXT_BOUND) {
     // Block choice text: CHOICE_TEXT_BOUND(visible) ... CHOICE_TEXT_BOUND(visible)
+    const blockStartTok = tokens[index]
     index += 1
     const parts: string[] = []
+    let foundClosingBound = false
 
     while (index < tokens.length) {
       const t = tokens[index]
@@ -514,6 +575,7 @@ function parseChoiceAt(
       // End of block text
       if (t.type === TokenTypes.CHOICE_TEXT_BOUND) {
         index += 1
+        foundClosingBound = true
         break
       }
 
@@ -531,6 +593,15 @@ function parseChoiceAt(
     }
 
     richText = parts.join('')
+
+    if (!foundClosingBound) {
+      addParserIssue({
+        kind: 'Warning',
+        message: 'Unterminated choice text block (missing closing ```)',
+        position: getTokenPosition(blockStartTok),
+        endPosition: getTokenEndPosition(tokens[Math.min(index - 1, tokens.length - 1)]),
+      })
+    }
   }
 
   // Optional body: skip non-semantic tokens, then parse INDENT...DEDENT window

@@ -1,4 +1,5 @@
 import { type AstProgram, type AstSection, type AstStatement, type SourcePosition } from './ast'
+import { type Token, TokenTypes } from './token'
 
 export type ValidationIssue = {
   kind: 'Error' | 'Warning'
@@ -52,6 +53,24 @@ export function validateProgram(program: AstProgram): ValidationIssue[] {
     const key = section.name.toLowerCase()
     if (!referencedSections.has(key) && key !== 'main') {
       issues.push({ kind: 'Warning', message: `Unreferenced section: '${section.name}'`, position: section.position, endPosition: section.endPosition })
+    }
+  }
+
+  return issues
+}
+
+// Report lexer-level errors as issues
+export function validateTokens(tokens: Token<unknown>[]): ValidationIssue[] {
+  const issues: ValidationIssue[] = []
+
+  for (const t of tokens) {
+    if (t.type === TokenTypes.ERROR) {
+      issues.push({
+        kind: 'Error',
+        message: `Lexing error: ${String(t.value ?? '').trim()}`,
+        position: t.line !== undefined && t.column !== undefined ? { line: t.line, column: t.column } : undefined,
+        endPosition: t.endLine !== undefined && t.endColumn !== undefined ? { line: t.endLine, column: t.endColumn } : undefined,
+      })
     }
   }
 
