@@ -562,23 +562,34 @@ connection.onRenameRequest((params: RenameParams): WorkspaceEdit | null => {
   if (iHit === -1) return null;
   const hit: any = tokens[iHit];
   const prev = prevSignificant(tokens as any[], iHit);
-  if (
-    hit?.type !== 'IDENTIFIER' ||
-    !(prev?.type === 'SECTION' || prev?.type === 'GOTO')
-  )
-    {
-      // Fallback: allow rename on plain word matching a known section
-      const w = wordAt(doc, cur);
-      if (w) {
-        const idx = buildSectionIndexFromText(doc);
-        if (idx.has(w.text.toLowerCase())) {
-          const start = { line: cur.line, character: w.startChar };
-          const end = { line: cur.line, character: w.endChar };
-          return { changes: { [doc.uri]: [{ range: { start, end }, newText: params.newName }] } } as WorkspaceEdit;
-        }
-      }
-      return null;
-    }
+  if (hit?.type !== 'IDENTIFIER' || !(prev?.type === 'SECTION' || prev?.type === 'GOTO')) {
+    // Fallback: allow rename on plain word matching a known section; update header and all gotos
+    const w = wordAt(doc, cur);
+    if (!w) return null;
+    const idx = buildSectionIndexFromText(doc);
+    const key = w.text.toLowerCase();
+    if (!idx.has(key)) return null;
+
+    const edits: TextEdit[] = [];
+    const seen = new Set<string>();
+    const pushEdit = (range: Range, newText: string) => {
+      const k = `${range.start.line}:${range.start.character}-${range.end.line}:${range.end.character}`;
+      if (seen.has(k)) return;
+      seen.add(k);
+      edits.push({ range, newText });
+    };
+
+    // header edit
+    const decl = idx.get(key)!;
+    const hdrStart = { line: decl.pos.line, character: decl.pos.character };
+    const hdrEnd = { line: decl.pos.line, character: decl.pos.character + w.text.length };
+    pushEdit({ start: hdrStart, end: hdrEnd }, params.newName);
+
+    // all gotos
+    for (const loc of findGotoRefsFromText(doc, w.text)) pushEdit(loc.range, params.newName);
+
+    return edits.length ? ({ changes: { [doc.uri]: edits } } as WorkspaceEdit) : null;
+  }
 
   const oldNameRaw = String(hit.value ?? '');
   const oldKey = oldNameRaw.toLowerCase();
