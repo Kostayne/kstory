@@ -39,12 +39,16 @@ export class Lexer {
   private position = 0;
   private tokens: Token<unknown>[] = [];
   private curChar: string | undefined = undefined;
-  private curLine = 0;
+  private curLine = 1;
+  private curColumn = 1;
   private prevIndent = 0;
   private isInComment = false;
   private isInChoiceText = false;
   private isExtendingStr = false;
   private lastStringTokenIndex = 0;
+  // Start position of the current STRING buffer (for precise text token spans)
+  private stringStartLine = 1;
+  private stringStartColumn = 1;
 
   public constructor(private source: string) {
     this.curChar = this.source[0];
@@ -56,8 +60,16 @@ export class Lexer {
 
   private step(times = 1) {
     for (let i = 0; i < times; i++) {
+      const prevChar = this.curChar;
       this.position++;
       this.curChar = this.source[this.position];
+
+      if (prevChar === '\n') {
+        this.curLine++;
+        this.curColumn = 1;
+      } else {
+        this.curColumn++;
+      }
     }
   }
 
@@ -66,7 +78,34 @@ export class Lexer {
       this.handleCurrentToken();
     }
 
-    this.tokens.push(eofToken());
+    this.push(eofToken());
+  }
+
+  // Push a token stamped with the current cursor position (both start and end)
+  private push(token: Token<unknown>) {
+    (token as any).line = this.curLine;
+    (token as any).column = this.curColumn;
+    (token as any).endLine = this.curLine;
+    (token as any).endColumn = this.curColumn;
+    this.tokens.push(token);
+  }
+
+  // Push a token with an explicit start position; end is the current cursor
+  private pushAt(token: Token<unknown>, line: number, column: number) {
+    (token as any).line = line;
+    (token as any).column = column;
+    (token as any).endLine = this.curLine;
+    (token as any).endColumn = this.curColumn;
+    this.tokens.push(token);
+  }
+
+  // Insert a token at an index, stamping with the current cursor position
+  private insertTokenAt(index: number, token: Token<unknown>) {
+    (token as any).line = this.curLine;
+    (token as any).column = this.curColumn;
+    (token as any).endLine = this.curLine;
+    (token as any).endColumn = this.curColumn;
+    this.tokens.splice(index, 0, token);
   }
 
   private handleCurrentToken() {
@@ -108,20 +147,24 @@ export class Lexer {
       return;
     }
 
+    const startLine = this.curLine;
+    const startColumn = this.curColumn;
     const content = `${this.curChar}> `;
 
     // skipping over the '-> '
     this.step(GOTO_PREFIX_LENGTH);
-    this.tokens.push(gotoToken(content));
+    this.pushAt(gotoToken(content), startLine, startColumn);
 
     this.handleIdentifier();
   }
 
   private handleIdentifier() {
+    const startLine = this.curLine;
+    const startColumn = this.curColumn;
     const content = this.readLineUntilComment();
 
     this.step();
-    this.tokens.push(identifierToken(content));
+    this.pushAt(identifierToken(content), startLine, startColumn);
   }
 
   private handleError() {
@@ -137,7 +180,7 @@ export class Lexer {
     }
 
     if (content.trim().length > 0) {
-      this.tokens.push({
+      this.push({
         type: TokenTypes.ERROR,
         value: content,
       });
@@ -149,13 +192,15 @@ export class Lexer {
       return;
     }
 
+    const startLine = this.curLine;
+    const startColumn = this.curColumn;
     // skipping over the '+ '
     if (this.peek(1) === ' ') {
       this.step(CHOICE_PREFIX_LENGTH);
-      this.tokens.push(choiceToken('+ '));
+      this.pushAt(choiceToken('+ '), startLine, startColumn);
     } else {
       this.step(1);
-      this.tokens.push(choiceToken('+'));
+      this.pushAt(choiceToken('+'), startLine, startColumn);
     }
 
     this.handleChoiceTextInline();
@@ -166,9 +211,9 @@ export class Lexer {
 
     if (content.length > 0) {
       // true stands for silent (inlined)
-      this.tokens.push(choiceTextBoundToken(true));
-      this.tokens.push(choiceTextToken(content));
-      this.tokens.push(choiceTextBoundToken(true));
+      this.push(choiceTextBoundToken(true));
+      this.push(choiceTextToken(content));
+      this.push(choiceTextBoundToken(true));
     }
   }
 
@@ -177,9 +222,11 @@ export class Lexer {
       return;
     }
 
+    const startLine = this.curLine;
+    const startColumn = this.curColumn;
     // skipping over the '== '
     this.step(SECTION_PREFIX_LENGTH);
-    this.tokens.push(sectionToken());
+    this.pushAt(sectionToken(), startLine, startColumn);
 
     this.handleSectionName();
   }
@@ -202,7 +249,7 @@ export class Lexer {
     }
 
     this.step();
-    this.tokens.push(identifierToken(content));
+    this.push(identifierToken(content));
   }
 
   private handleChoiceTag() {
@@ -210,16 +257,18 @@ export class Lexer {
       return;
     }
 
+    const startLine = this.curLine;
+    const startColumn = this.curColumn;
     // stepping over the '@', so we can use getTagName fn.
     this.step();
 
     const tagName = this.getTagName();
     const value = this.getTagValue();
 
-    this.tokens.push(choiceTagToken(tagName));
+    this.pushAt(choiceTagToken(tagName), startLine, startColumn);
 
     if (value) {
-      this.tokens.push(tagValueToken(value));
+      this.pushAt(tagValueToken(value), startLine, startColumn);
     }
   }
 
@@ -227,7 +276,7 @@ export class Lexer {
   private handleChoiceText() {
     if (this.isChoiceTextBound() && !this.isInChoiceText) {
       this.isInChoiceText = true;
-      this.tokens.push(choiceTextBoundToken());
+      this.push(choiceTextBoundToken());
       this.step(3);
 
       this.handleChoiceTextExtend();
@@ -275,16 +324,16 @@ export class Lexer {
 
   private handleChoiceTextNewline(content: string): string {
     if (content.length > 0) {
-      this.tokens.push(choiceTextToken(content));
+      this.push(choiceTextToken(content));
     }
-    this.tokens.push(newLineToken());
+    this.push(newLineToken());
     this.step();
     return '';
   }
 
   private handleChoiceTextComment(content: string): string {
     if (content.length > 0) {
-      this.tokens.push(choiceTextToken(content));
+      this.push(choiceTextToken(content));
     }
     this.handleCommentContent();
     return '';
@@ -292,23 +341,23 @@ export class Lexer {
 
   private handleChoiceTextMultiComment(content: string): string {
     if (content.length > 0) {
-      this.tokens.push(choiceTextToken(content));
+      this.push(choiceTextToken(content));
     }
     this.isInComment = true;
     this.step(2); // skip over /*
-    this.tokens.push(multiCommentBeginToken());
+    this.push(multiCommentBeginToken());
     this.handleMultiCommentExtend();
     return '';
   }
 
   private finalizeChoiceText(content: string, isInlined: boolean): void {
     if (content.length > 0) {
-      this.tokens.push(choiceTextToken(content));
+      this.push(choiceTextToken(content));
     }
 
     this.isInChoiceText = false;
           this.step(CHOICE_TEXT_BOUND_LENGTH); // skip over ```
-    this.tokens.push(choiceTextBoundToken(isInlined));
+    this.push(choiceTextBoundToken(isInlined));
   }
 
   private handleTag() {
@@ -316,13 +365,15 @@ export class Lexer {
       return;
     }
 
+    const startLine = this.curLine;
+    const startColumn = this.curColumn;
     const tagName = this.getTagName();
     const value = this.getTagValue();
 
-    this.tokens.push(tagToken(tagName));
+    this.pushAt(tagToken(tagName), startLine, startColumn);
 
     if (value) {
-      this.tokens.push(tagValueToken(value));
+      this.pushAt(tagValueToken(value), startLine, startColumn);
     }
   }
 
@@ -332,11 +383,13 @@ export class Lexer {
     }
 
     // Skip over @call:
+    const startLine = this.curLine;
+    const startColumn = this.curColumn;
     this.step(CALL_PREFIX_LENGTH);
     
     // Read function name
     let functionName = '';
-    while (this.curChar && this.curChar !== '(' && this.curChar !== ' ') {
+    while (this.curChar && this.curChar !== '(' && this.curChar !== ' ' && !this.isNewLine()) {
       functionName += this.curChar;
       this.step();
     }
@@ -348,14 +401,14 @@ export class Lexer {
       this.step();
       
       // Continue reading until we find the real function call
-      while (this.curChar && this.curChar !== '(' && this.curChar !== ' ') {
+      while (this.curChar && this.curChar !== '(' && this.curChar !== ' ' && !this.isNewLine()) {
         functionName += this.curChar;
         this.step();
       }
     }
 
     // Create call token first
-    this.tokens.push(callToken(functionName));
+    this.pushAt(callToken(functionName), startLine, startColumn);
 
     if (this.curChar === '(') {
       this.step(); // skip over (
@@ -370,6 +423,8 @@ export class Lexer {
     let depth = 1;
     let currentArg = '';
     let inQuotes = false;
+    let argStartLine = this.curLine;
+    let argStartColumn = this.curColumn;
 
     while (this.curChar && depth > 0) {
       if (this.curChar === '"' && !this.isEscapedChar()) {
@@ -386,10 +441,12 @@ export class Lexer {
           }
         } else if (this.curChar === ',' && depth === 1) {
           if (currentArg.trim().length > 0) {
-            this.tokens.push(callArgumentToken(currentArg.trim()));
+            this.pushAt(callArgumentToken(currentArg.trim()), argStartLine, argStartColumn);
           }
           currentArg = '';
           this.step();
+          argStartLine = this.curLine;
+          argStartColumn = this.curColumn;
           continue;
         }
       }
@@ -399,7 +456,7 @@ export class Lexer {
     }
 
     if (currentArg.trim().length > 0) {
-      this.tokens.push(callArgumentToken(currentArg.trim()));
+      this.pushAt(callArgumentToken(currentArg.trim()), argStartLine, argStartColumn);
     }
   }
 
@@ -499,9 +556,11 @@ export class Lexer {
   }
 
   private handleNewReplica() {
+    const startLine = this.curLine;
+    const startColumn = this.curColumn;
     this.step(REPLICA_PREFIX_LENGTH);
     this.isExtendingStr = true;
-    this.tokens.push(replicaBeginToken());
+    this.pushAt(replicaBeginToken(), startLine, startColumn);
 
     this.handleExtendReplica();
   }
@@ -544,7 +603,7 @@ export class Lexer {
 
   private addStringTokenIfNotEmpty(content: string): void {
     if (content.trim().length > 0) {
-      this.tokens.push(stringToken(content));
+      this.pushAt(stringToken(content), this.stringStartLine, this.stringStartColumn);
       this.lastStringTokenIndex = this.tokens.length - 1;
     }
   }
@@ -559,6 +618,10 @@ export class Lexer {
         continue;
       }
 
+      if (content.length === 0) {
+        this.stringStartLine = this.curLine;
+        this.stringStartColumn = this.curColumn;
+      }
       content += this.curChar;
 
       if (this.isReplicaEnding()) {
@@ -588,14 +651,14 @@ export class Lexer {
 
   private finalizeReplicaContent(content: string): void {
     if (content.trim().length > 0) {
-      this.tokens.push(stringToken(content));
+      this.pushAt(stringToken(content), this.stringStartLine, this.stringStartColumn);
       this.lastStringTokenIndex = this.tokens.length - 1;
     }
   }
 
   private handleEndReplica() {
     this.isExtendingStr = false;
-    this.tokens.splice(this.lastStringTokenIndex + 1, 0, replicaEndToken());
+    this.insertTokenAt(this.lastStringTokenIndex + 1, replicaEndToken());
   }
 
   private handleIndent() {
@@ -635,10 +698,10 @@ export class Lexer {
 
     while (indentDiff !== 0) {
       if (indentDiff > 0) {
-        this.tokens.push(indentToken());
+        this.push(indentToken());
         indentDiff--;
       } else {
-        this.tokens.push(dedentToken());
+        this.push(dedentToken());
         indentDiff++;
       }
     }
@@ -656,8 +719,7 @@ export class Lexer {
     if (this.isMultiComment()) {
       this.isInComment = true;
       this.step(MULTI_COMMENT_START_LENGTH); // skip over /*
-      
-      this.tokens.push(multiCommentBeginToken());
+      this.push(multiCommentBeginToken());
       this.handleMultiCommentExtend();
       return;
     }
@@ -678,7 +740,7 @@ export class Lexer {
     }
     
     if (content.length > 1) { // More than just '#'
-      this.tokens.push(commentToken(content));
+      this.push(commentToken(content));
     }
   }
 
@@ -688,7 +750,7 @@ export class Lexer {
     // check cur char
     if (this.isMultiCommentEnd()) {
       this.isInComment = false;
-      this.tokens.push(multiCommentEndToken());
+      this.push(multiCommentEndToken());
       this.step(MULTI_COMMENT_END_LENGTH); // skip over */
       return;
     }
@@ -709,11 +771,11 @@ export class Lexer {
     }
 
     // adding comment content
-    this.tokens.push(commentContentToken(content));
+    this.push(commentContentToken(content));
 
     if (this.isMultiCommentEnd(1)) {
       this.isInComment = false;
-      this.tokens.push(multiCommentEndToken());
+      this.push(multiCommentEndToken());
       this.step(2);
     }
 
@@ -722,8 +784,7 @@ export class Lexer {
 
   private handleNewLine() {
     if (this.curChar === '\n') {
-      this.tokens.push(newLineToken());
-      this.curLine++;
+      this.push(newLineToken());
       this.step();
     }
   }

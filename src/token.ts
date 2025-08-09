@@ -45,4 +45,9 @@ export type TokenType = typeof TokenTypes[keyof typeof TokenTypes]
 export interface Token<T = never> {
   readonly type: TokenType
   readonly value?: T
+  // Optional source position (line and column) for better diagnostics
+  readonly line?: number
+  readonly column?: number
+  readonly endLine?: number
+  readonly endColumn?: number
 }
