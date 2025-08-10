@@ -1,16 +1,27 @@
 {
-	"name": "lsp-sample",
-	"description": "KStory LSP",
-	"author": "Microsoft Corporation",
+	"name": "kstory-lsp",
+	"displayName": "KStory Language Support",
+	"description": "Language Server Protocol support for KStory interactive fiction language",
+	"author": "kostayne",
 	"license": "MIT",
 	"version": "1.0.0",
+	"icon": "icons/kstory.png",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/Microsoft/vscode-extension-samples"
+		"url": "https://github.com/kstory/kstory-lsp"
 	},
-	"publisher": "vscode-samples",
-	"categories": [],
+	"publisher": "kstory",
+	"categories": [
+		"Programming Languages",
+		"Language Packs"
+	],
 	"keywords": [
+		"kstory",
+		"interactive-fiction",
+		"visual-novel",
+		"story-scripting",
+		"language-server",
+		"lsp",
 		"multi-root ready"
 	],
 	"engines": {
@@ -25,7 +36,11 @@
 			{
 				"id": "kstory",
 				"extensions": [".ks"],
-				"configuration": "./language-configuration.json"
+				"configuration": "./language-configuration.json",
+				"icon": {
+					"light": "./icons/kstory-light.png",
+					"dark": "./icons/kstory-dark.png"
+				}
 			}
 		],
 		"grammars": [
@@ -34,7 +49,10 @@
 				"scopeName": "source.kstory",
 				"path": "./syntaxes/kstory.tmLanguage.json"
 			}
-		]
+		],
+		"fileExtensions": {
+			".ks": "kstory"
+		}
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",

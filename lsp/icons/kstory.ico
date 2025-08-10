@@ -1,0 +1,5 @@
+# This is a placeholder for the ICO icon file
+# ICO files contain multiple sizes (16x16, 32x32, 48x48)
+# You can create ICO from PNG using:
+# - Online converters
+# - ImageMagick: convert kstory-16.png kstory-32.png kstory-48.png kstory.ico

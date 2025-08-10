@@ -1,0 +1,22 @@
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Book background -->
+  <rect x="2" y="1" width="12" height="14" rx="1" fill="#5A9FE2" stroke="#3E6C9A" stroke-width="0.5"/>
+  
+  <!-- Book pages -->
+  <rect x="2.5" y="1.5" width="11" height="13" rx="0.5" fill="#2D3748"/>
+  
+  <!-- Text lines representing story content -->
+  <rect x="4" y="3" width="8" height="1" rx="0.5" fill="#E2E8F0"/>
+  <rect x="4" y="5" width="6" height="1" rx="0.5" fill="#E2E8F0"/>
+  <rect x="4" y="7" width="7" height="1" rx="0.5" fill="#E2E8F0"/>
+  <rect x="4" y="9" width="5" height="1" rx="0.5" fill="#E2E8F0"/>
+  <rect x="4" y="11" width="8" height="1" rx="0.5" fill="#E2E8F0"/>
+  
+  <!-- Book spine -->
+  <rect x="2" y="1" width="1" height="14" fill="#3E6C9A"/>
+  
+  <!-- Decorative elements -->
+  <circle cx="13" cy="3" r="0.5" fill="#FC8181"/>
+  <circle cx="13" cy="5" r="0.5" fill="#F6AD55"/>
+  <circle cx="13" cy="7" r="0.5" fill="#68D391"/>
+</svg>
