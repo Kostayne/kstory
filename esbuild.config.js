@@ -18,7 +18,7 @@ const serverConfig = {
   define: {
     'process.env.NODE_ENV': '"production"'
   },
-  minify: false, // Для отладки
+  minify: false, // For debugging
   keepNames: true,
   logLevel: 'info'
 };
@@ -32,41 +32,60 @@ const clientConfig = {
   outfile: 'dist/lsp/client.js',
   sourcemap: true,
   external: [
-    'vscode',
-    'vscode-languageclient'
+    'vscode'
   ],
   define: {
     'process.env.NODE_ENV': '"production"'
   },
-  minify: false, // Для отладки
+  minify: false, // For debugging
   keepNames: true,
   logLevel: 'info'
 };
 
-// Функция для сборки
+// Build function
+const fs = require('fs');
+const path = require('path');
+
 async function build() {
   try {
-    // Сборка сервера
+    // Build server
     await esbuild.build(serverConfig);
     console.log('✅ LSP server built successfully');
     
-    // Сборка клиента
+    // Build client
     await esbuild.build(clientConfig);
     console.log('✅ LSP client built successfully');
+    
+    // Copy files to lsp/dist/lsp for VS Code extension
+    const lspDistDir = path.join(__dirname, 'lsp', 'dist', 'lsp');
+    if (!fs.existsSync(lspDistDir)) {
+      fs.mkdirSync(lspDistDir, { recursive: true });
+    }
+    
+    fs.copyFileSync(
+      path.join(__dirname, 'dist', 'lsp', 'server.js'),
+      path.join(lspDistDir, 'server.js')
+    );
+    fs.copyFileSync(
+      path.join(__dirname, 'dist', 'lsp', 'client.js'),
+      path.join(lspDistDir, 'client.js')
+    );
+    
+    console.log('✅ Files copied to lsp/dist/lsp/');
   } catch (error) {
     console.error('❌ Build failed:', error);
     process.exit(1);
   }
 }
 
-// Функция для watch режима
+// Watch mode function
 async function watch() {
   try {
-    // Создаем контексты для сервера и клиента
+    // Create contexts for server and client
     const serverContext = await esbuild.context(serverConfig);
     const clientContext = await esbuild.context(clientConfig);
     
-    // Запускаем watch режим для обоих
+    // Start watch mode for both
     await Promise.all([
       serverContext.watch(),
       clientContext.watch()
@@ -79,7 +98,7 @@ async function watch() {
   }
 }
 
-// Запуск в зависимости от аргументов
+// Run based on arguments
 const args = process.argv.slice(2);
 if (args.includes('--watch')) {
   watch();

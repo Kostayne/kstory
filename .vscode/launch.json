@@ -67,7 +67,7 @@
 			"type": "node",
 			"request": "launch",
 			"name": "Run Main App",
-			"program": "${workspaceRoot}/node_modules/.bсin/tsx",
+			"program": "${workspaceRoot}/node_modules/.bin/tsx",
 			"args": ["src/main.ts"],
 			"cwd": "${workspaceRoot}",
 			"console": "integratedTerminal",

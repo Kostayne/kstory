@@ -30,6 +30,6 @@ Block text line 2
 # Comment before goto
 => Section_One
 
-== Test_Section_AB
+== Test_Section_A
 
--> Test_Section_AB
+-> Test_Section_A
