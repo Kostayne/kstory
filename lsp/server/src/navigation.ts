@@ -8,6 +8,7 @@ import type {
 } from 'vscode-languageserver/node';
 import type { TextDocument } from 'vscode-languageserver-textdocument';
 import { Logger } from './logger';
+import type { WorkspaceManager } from './workspaceManager';
 
 const logger = Logger.getInstance();
 
@@ -115,7 +116,8 @@ function getSectionNameAtPosition(
 // Generate definition location
 export function generateDefinition(
   params: TextDocumentPositionParams,
-  document: TextDocument
+  document: TextDocument,
+  workspaceManager?: WorkspaceManager
 ): Definition | null {
   const sectionName = getSectionNameAtPosition(document, params.position);
 
@@ -128,7 +130,25 @@ export function generateDefinition(
 
   logger.debug(`Looking for definition of section: ${sectionName}`);
 
-  const definition = findSectionDefinition(document, sectionName);
+  // First try to find in current document
+  let definition = findSectionDefinition(document, sectionName);
+
+  // If not found in current document and workspace manager is available, search across workspace
+  if (!definition && workspaceManager) {
+    const workspaceDefinition = workspaceManager.findSectionDefinition(sectionName);
+    if (workspaceDefinition) {
+      definition = {
+        uri: workspaceDefinition.uri,
+        range: {
+          start: { line: workspaceDefinition.line, character: 0 },
+          end: { line: workspaceDefinition.line, character: 100 }, // Approximate end
+        },
+      };
+      logger.info(
+        `Found definition for section "${sectionName}" in workspace at ${workspaceDefinition.uri}:${workspaceDefinition.line + 1}`
+      );
+    }
+  }
 
   if (definition) {
     logger.info(
@@ -144,7 +164,8 @@ export function generateDefinition(
 // Generate references
 export function generateReferences(
   params: ReferenceParams,
-  document: TextDocument
+  document: TextDocument,
+  workspaceManager?: WorkspaceManager
 ): Location[] {
   const sectionName = getSectionNameAtPosition(document, params.position);
 
@@ -168,9 +189,23 @@ export function generateReferences(
     );
   }
 
-  // Add all goto references
+  // Add all goto references from current document
   const gotoReferences = findSectionReferences(document, sectionName);
   references.push(...gotoReferences);
+
+  // If workspace manager is available, search for references across workspace
+  if (workspaceManager) {
+    const workspaceReferences = workspaceManager.findSectionReferences(sectionName);
+    workspaceReferences.forEach((ref) => {
+      references.push({
+        uri: ref.uri,
+        range: {
+          start: { line: ref.line, character: ref.character },
+          end: { line: ref.line, character: ref.character + sectionName.length },
+        },
+      });
+    });
+  }
 
   logger.info(
     `Found ${references.length} references for section "${sectionName}"`

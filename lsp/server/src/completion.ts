@@ -6,6 +6,7 @@ import { CompletionItemKind } from 'vscode-languageserver/node';
 import type { TextDocument } from 'vscode-languageserver-textdocument';
 import type { DocumentManager } from './documentManager';
 import { Logger } from './logger';
+import type { WorkspaceManager } from './workspaceManager';
 
 const logger = Logger.getInstance();
 
@@ -93,7 +94,8 @@ export function isInsideReplica(lines: string[], currentLine: number): boolean {
 export function generateCompletions(
   params: TextDocumentPositionParams,
   document: TextDocument,
-  documentManager?: DocumentManager
+  documentManager?: DocumentManager,
+  workspaceManager?: WorkspaceManager
 ): CompletionItem[] {
   const text = document.getText();
   const lines = text.split('\n');
@@ -137,6 +139,7 @@ export function generateCompletions(
     currentLine.includes('->') ||
     currentLine.includes('=>')
   ) {
+    // Get sections from current document
     const sections = getSections(document, documentManager);
     sections.forEach((section) => {
       completions.push({
@@ -146,6 +149,23 @@ export function generateCompletions(
         documentation: `Go to section: ${section}`,
       });
     });
+
+    // If workspace manager is available, add sections from other files
+    if (workspaceManager) {
+      const allSections = workspaceManager.getAllSections();
+      allSections.forEach((fileSections, fileUri) => {
+        if (fileUri !== document.uri) {
+          fileSections.forEach((section) => {
+            completions.push({
+              label: section,
+              kind: CompletionItemKind.Reference,
+              detail: `Section (${fileUri.split('/').pop()})`,
+              documentation: `Go to section: ${section} in ${fileUri.split('/').pop()}`,
+            });
+          });
+        }
+      });
+    }
   }
 
   // Autocomplete keywords

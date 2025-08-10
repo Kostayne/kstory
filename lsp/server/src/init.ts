@@ -1,8 +1,8 @@
 import {
-    createConnection,
-    type InitializeResult,
-    TextDocumentSyncKind,
-    TextDocuments,
+  createConnection,
+  type InitializeResult,
+  TextDocumentSyncKind,
+  TextDocuments
 } from 'vscode-languageserver/node';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { generateCodeActions } from './actions';
@@ -12,11 +12,12 @@ import { DocumentManager } from './documentManager';
 import { generateHover } from './hover';
 import { Logger, LogLevel } from './logger';
 import {
-    generateDefinition,
-    generateReferences,
-    generateRename,
+  generateDefinition,
+  generateReferences,
+  generateRename,
 } from './navigation';
 import { generateDocumentSymbols } from './symbols';
+import { WorkspaceManager } from './workspaceManager';
 
 export function initializeServer() {
   const logger = Logger.getInstance();
@@ -31,6 +32,7 @@ export function initializeServer() {
   const connection = createConnection();
   const documents = new TextDocuments(TextDocument);
   const documentManager = new DocumentManager();
+  const workspaceManager = new WorkspaceManager(documentManager);
 
   connection.onInitialize((params) => {
     logger.info('Initializing...');
@@ -52,6 +54,13 @@ export function initializeServer() {
           codeActionKinds: ['quickfix', 'refactor'],
         },
         renameProvider: true,
+        workspace: {
+          workspaceFolders: {
+            supported: true,
+            changeNotifications: true,
+          },
+        },
+
       },
     };
 
@@ -61,6 +70,17 @@ export function initializeServer() {
 
   connection.onInitialized(() => {
     logger.info('Server initialized successfully');
+    
+    // Register workspace folder change notifications
+    connection.workspace.onDidChangeWorkspaceFolders((event) => {
+      logger.info('Workspace folders changed');
+      event.added.forEach((folder) => {
+        logger.info(`Added workspace folder: ${folder.uri}`);
+      });
+      event.removed.forEach((folder) => {
+        logger.info(`Removed workspace folder: ${folder.uri}`);
+      });
+    });
   });
 
   // Autocompletion
@@ -71,7 +91,7 @@ export function initializeServer() {
       return [];
     }
 
-    return generateCompletions(params, document, documentManager);
+    return generateCompletions(params, document, documentManager, workspaceManager);
   });
 
   // Hover
@@ -95,7 +115,7 @@ export function initializeServer() {
       return null;
     }
 
-    return generateDefinition(params, document);
+    return generateDefinition(params, document, workspaceManager);
   });
 
   // Find References
@@ -108,7 +128,7 @@ export function initializeServer() {
       return [];
     }
 
-    return generateReferences(params, document);
+    return generateReferences(params, document, workspaceManager);
   });
 
   // Document Symbols
@@ -149,6 +169,10 @@ export function initializeServer() {
   // Handle document opening
   documents.onDidOpen((event) => {
     logger.info(`Document opened: ${event.document.uri}`);
+    
+    // Add document to workspace
+    workspaceManager.addFile(event.document);
+    
     const diagnostics = validateDocument(event.document, documentManager);
     connection.sendDiagnostics({
       uri: event.document.uri,
@@ -159,6 +183,10 @@ export function initializeServer() {
   // Handle document changes
   documents.onDidChangeContent((event) => {
     logger.debug(`Document changed: ${event.document.uri}`);
+    
+    // Update document in workspace
+    workspaceManager.addFile(event.document);
+    
     const diagnostics = validateDocument(event.document, documentManager);
     connection.sendDiagnostics({
       uri: event.document.uri,
@@ -169,6 +197,10 @@ export function initializeServer() {
   // Handle document closing
   documents.onDidClose((event) => {
     logger.info(`Document closed: ${event.document.uri}`);
+    
+    // Remove document from workspace
+    workspaceManager.removeFile(event.document.uri);
+    
     // Clear diagnostics and cache when closing
     documentManager.clearCache(event.document.uri);
     connection.sendDiagnostics({
@@ -176,6 +208,8 @@ export function initializeServer() {
       diagnostics: [],
     });
   });
+
+
 
   // Start listening
   documents.listen(connection);
