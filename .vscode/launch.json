@@ -11,8 +11,8 @@
 				"${workspaceRoot}/lsp.ks"
 			],
 			"outFiles": [
-				"${workspaceRoot}/lsp/client/out/**/*.js",
-				"${workspaceRoot}/lsp/server/out/**/*.js"
+				"${workspaceRoot}/dist/lsp/server.js",
+				"${workspaceRoot}/dist/lsp/client.js"
 			],
 			"autoAttachChildProcesses": true,
 			"preLaunchTask": "compile-lsp",
@@ -30,14 +30,48 @@
 				"${workspaceRoot}/lsp.ks"
 			],
 			"outFiles": [
-				"${workspaceRoot}/lsp/client/out/**/*.js",
-				"${workspaceRoot}/lsp/server/out/**/*.js"
+				"${workspaceRoot}/dist/lsp/server.js",
+				"${workspaceRoot}/dist/lsp/client.js"
 			],
 			"autoAttachChildProcesses": true,
 			"preLaunchTask": "watch-lsp",
 			"env": {
 				"VSCODE_DEBUG_MODE": "true"
 			}
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Debug LSP Server",
+			"program": "${workspaceRoot}/dist/lsp/server.js",
+			"args": ["--stdio"],
+			"cwd": "${workspaceRoot}",
+			"preLaunchTask": "compile-lsp",
+			"env": {
+				"VSCODE_DEBUG_MODE": "true"
+			},
+			"console": "integratedTerminal",
+			"internalConsoleOptions": "neverOpen"
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Run Tests",
+			"program": "${workspaceRoot}/node_modules/.bin/vitest",
+			"args": ["run"],
+			"cwd": "${workspaceRoot}",
+			"console": "integratedTerminal",
+			"internalConsoleOptions": "neverOpen"
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Run Main App",
+			"program": "${workspaceRoot}/node_modules/.bсin/tsx",
+			"args": ["src/main.ts"],
+			"cwd": "${workspaceRoot}",
+			"console": "integratedTerminal",
+			"internalConsoleOptions": "neverOpen"
 		}
 	]
 }

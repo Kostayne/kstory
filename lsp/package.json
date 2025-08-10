@@ -19,7 +19,7 @@
 	"activationEvents": [
 		"onStartupFinished"
 	],
-	"main": "./client/out/extension",
+	"main": "./dist/lsp/client.js",
 	"contributes": {
 		"languages": [
 			{

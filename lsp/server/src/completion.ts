@@ -1,6 +1,10 @@
-import type { CompletionItem, TextDocumentPositionParams } from 'vscode-languageserver/node';
+import type {
+  CompletionItem,
+  TextDocumentPositionParams,
+} from 'vscode-languageserver/node';
 import { CompletionItemKind } from 'vscode-languageserver/node';
 import type { TextDocument } from 'vscode-languageserver-textdocument';
+import type { DocumentManager } from './documentManager';
 import { Logger } from './logger';
 
 const logger = Logger.getInstance();
@@ -13,24 +17,36 @@ const INLINE_CALL_PATTERN = /\{call:\w*\([^)]*$/;
 function isInsideFunctionCall(line: string, charIndex: number): boolean {
   // Check if we're inside @call:function() or {call:function()}
   const beforeCursor = line.substring(0, charIndex);
-  
+
   // Check for @call:function()
   const atCallMatch = beforeCursor.match(ATCALL_PATTERN);
   if (atCallMatch) {
     return true;
   }
-  
+
   // Check for {call:function()
   const inlineCallMatch = beforeCursor.match(INLINE_CALL_PATTERN);
   if (inlineCallMatch) {
     return true;
   }
-  
+
   return false;
 }
 
 // Get all sections from document
-export function getSections(document: TextDocument): string[] {
+export function getSections(
+  document: TextDocument,
+  documentManager?: DocumentManager
+): string[] {
+  // Try to use parser if available
+  if (documentManager) {
+    const parsed = documentManager.getParsedDocument(document);
+    if (parsed && parsed.program.sections) {
+      return parsed.program.sections.map((section: any) => section.name);
+    }
+  }
+
+  // Fallback to regex-based parsing
   const sections: string[] = [];
   const text = document.getText();
   const lines = text.split('\n');
@@ -50,31 +66,34 @@ export function getSections(document: TextDocument): string[] {
 // Check if we're inside a replica
 export function isInsideReplica(lines: string[], currentLine: number): boolean {
   let isInReplica = false;
-  
+
   for (let i = 0; i <= currentLine; i++) {
     const line = lines[i];
     if (line.trim().startsWith('" ')) {
       isInReplica = true;
     } else if (isInReplica) {
       // Replica ends before these tokens
-      if (line.trim().startsWith('->') || 
-          line.trim().startsWith('=>') || 
-          line.trim().startsWith('@') || 
-          line.trim().startsWith('+') || 
-          line.trim().startsWith('==')) {
+      if (
+        line.trim().startsWith('->') ||
+        line.trim().startsWith('=>') ||
+        line.trim().startsWith('@') ||
+        line.trim().startsWith('+') ||
+        line.trim().startsWith('==')
+      ) {
         isInReplica = false;
       }
       // Replica continues after inline calls {call:...} and multiline comments
     }
   }
-  
+
   return isInReplica;
 }
 
 // Generate completion items
 export function generateCompletions(
   params: TextDocumentPositionParams,
-  document: TextDocument
+  document: TextDocument,
+  documentManager?: DocumentManager
 ): CompletionItem[] {
   const text = document.getText();
   const lines = text.split('\n');
@@ -84,7 +103,9 @@ export function generateCompletions(
   const completions: CompletionItem[] = [];
   const isInReplica = isInsideReplica(lines, params.position.line);
 
-  logger.debug(`Generating completions at line ${params.position.line + 1}, char: ${currentChar}, inReplica: ${isInReplica}`);
+  logger.debug(
+    `Generating completions at line ${params.position.line + 1}, char: ${currentChar}, inReplica: ${isInReplica}`
+  );
 
   // Autocomplete keywords
   if (currentChar === '@') {
@@ -116,7 +137,7 @@ export function generateCompletions(
     currentLine.includes('->') ||
     currentLine.includes('=>')
   ) {
-    const sections = getSections(document);
+    const sections = getSections(document, documentManager);
     sections.forEach((section) => {
       completions.push({
         label: section,
@@ -147,7 +168,10 @@ export function generateCompletions(
   }
 
   // Replica starts with " and space, doesn't close explicitly, but not inside function calls
-  if (currentChar === '"' && !isInsideFunctionCall(currentLine, params.position.character)) {
+  if (
+    currentChar === '"' &&
+    !isInsideFunctionCall(currentLine, params.position.character)
+  ) {
     completions.push({
       label: '" ',
       kind: CompletionItemKind.Text,
@@ -162,7 +186,8 @@ export function generateCompletions(
       label: '{call:',
       kind: CompletionItemKind.Function,
       detail: 'Inline call',
-      documentation: 'Inline function call within replica (replica continues after)',
+      documentation:
+        'Inline function call within replica (replica continues after)',
     });
   }
 
@@ -173,13 +198,15 @@ export function generateCompletions(
         label: '->',
         kind: CompletionItemKind.Keyword,
         detail: 'Goto (ends replica)',
-        documentation: 'Go to section (comma-separated for multiple) - ends current replica',
+        documentation:
+          'Go to section (comma-separated for multiple) - ends current replica',
       },
       {
         label: '=>',
         kind: CompletionItemKind.Keyword,
         detail: 'Goto (ends replica)',
-        documentation: 'Go to section (alternative syntax) - ends current replica',
+        documentation:
+          'Go to section (alternative syntax) - ends current replica',
       }
     );
   }

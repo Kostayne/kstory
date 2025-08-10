@@ -9,12 +9,18 @@
 		"sourceMap": true,
 		"strict": true,
 		"outDir": "out",
-		"rootDir": "src"
+		"rootDir": "../..",
+		"baseUrl": "../..",
+		"paths": {
+			"@/*": ["src/*"]
+		}
 	},
 	"include": [
-		"src"
+		"src",
+		"../../src"
 	],
 	"exclude": [
-		"node_modules"
+		"node_modules",
+		"../../src/main.ts"
 	]
 }

@@ -1,16 +1,22 @@
 {
   "scripts": {
-    "main": "bun run src/main.ts",
-    "test": "bun test",
-    "build:lsp": "esbuild lsp/server.ts --bundle --platform=node --target=node18 --format=cjs --outfile=dist/lsp/server.js",
+    "main": "tsx src/main.ts",
+    "test": "vitest",
+    "build:lsp": "node esbuild.config.js",
+    "build:lsp:watch": "node esbuild.config.js --watch",
+    "build:client": "node esbuild.config.js --client",
+    "build:server": "node esbuild.config.js --server",
     "lsp": "node dist/lsp/server.js",
-    "lsp:node": "node dist/lsp/server.js"
+    "lsp:dev": "pnpm run build:lsp && pnpm run lsp",
+    "dev": "pnpm run build:lsp:watch"
   },
   "dependencies": {},
   "devDependencies": {
     "@biomejs/biome": "2.1.1",
     "@types/node": "^24.0.13",
     "esbuild": "^0.25.8",
+    "tsx": "^4.19.2",
+    "vitest": "^2.1.8",
     "vscode-languageserver": "^9.0.1",
     "vscode-languageserver-textdocument": "^1.0.8"
   }

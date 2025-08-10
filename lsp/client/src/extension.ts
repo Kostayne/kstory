@@ -14,7 +14,7 @@ export function activate(context: ExtensionContext) {
   console.log('KStory LSP Client: Activating extension...');
   
   const serverModule = context.asAbsolutePath(
-    path.join('server', 'out', 'server.js')
+    path.join('..', 'dist', 'lsp', 'server.js')
   );
 
   const serverOptions: ServerOptions = {

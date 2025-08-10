@@ -2,20 +2,20 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"type": "npm",
-			"script": "compile",
+			"type": "shell",
+			"command": "pnpm",
+			"args": ["run", "build:lsp"],
 			"group": "build",
 			"presentation": {
 				"panel": "dedicated",
 				"reveal": "never"
 			},
-			"problemMatcher": [
-				"$tsc"
-			]
+			"problemMatcher": []
 		},
 		{
-			"type": "npm",
-			"script": "watch",
+			"type": "shell",
+			"command": "pnpm",
+			"args": ["run", "build:lsp:watch"],
 			"isBackground": true,
 			"group": {
 				"kind": "build",
@@ -25,9 +25,7 @@
 				"panel": "dedicated",
 				"reveal": "never"
 			},
-			"problemMatcher": [
-				"$tsc-watch"
-			]
+			"problemMatcher": []
 		}
 	]
 }

@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it } from 'bun:test';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { Lexer } from '@/lexer';
 import {
-  getParserIssues,
-  parseProgramFromTokens,
-  parseSimpleStatements,
+    getParserIssues,
+    parseProgramFromTokens,
+    parseSimpleStatements,
 } from '@/parser';
 
 const lex = (src: string) => {

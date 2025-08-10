@@ -9,21 +9,21 @@
       "label": "npm: build (kstory-language-client)"
     },
     {
-      "type": "npm",
-      "script": "compile",
-      "path": "lsp",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["run", "build:lsp"],
       "group": "build",
       "presentation": {
         "panel": "dedicated",
         "reveal": "never"
       },
-      "problemMatcher": ["$tsc"],
+      "problemMatcher": [],
       "label": "compile-lsp"
     },
     {
-      "type": "npm",
-      "script": "watch",
-      "path": "lsp",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["run", "build:lsp:watch"],
       "isBackground": true,
       "group": {
         "kind": "build",
@@ -33,7 +33,7 @@
         "panel": "dedicated",
         "reveal": "never"
       },
-      "problemMatcher": ["$tsc-watch"],
+      "problemMatcher": [],
       "label": "watch-lsp"
     }
   ]

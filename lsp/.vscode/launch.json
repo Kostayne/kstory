@@ -8,13 +8,14 @@
 			"runtimeExecutable": "${execPath}",
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}"],
 			"outFiles": [
-				"${workspaceRoot}/client/out/**/*.js",
-				"${workspaceRoot}/server/out/**/*.js"
+				"${workspaceRoot}/../dist/lsp/server.js",
+				"${workspaceRoot}/../dist/lsp/client.js"
 			],
 			"autoAttachChildProcesses": true,
 			"preLaunchTask": {
-				"type": "npm",
-				"script": "compile"
+				"type": "shell",
+				"command": "pnpm",
+				"args": ["run", "build:lsp"]
 			},
 			"env": {
 				"VSCODE_DEBUG_MODE": "true"
@@ -27,13 +28,14 @@
 			"runtimeExecutable": "${execPath}",
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}"],
 			"outFiles": [
-				"${workspaceRoot}/client/out/**/*.js",
-				"${workspaceRoot}/server/out/**/*.js"
+				"${workspaceRoot}/../dist/lsp/server.js",
+				"${workspaceRoot}/dist/lsp/client.js"
 			],
 			"autoAttachChildProcesses": true,
 			"preLaunchTask": {
-				"type": "npm",
-				"script": "watch"
+				"type": "shell",
+				"command": "pnpm",
+				"args": ["run", "build:lsp:watch"]
 			},
 			"env": {
 				"VSCODE_DEBUG_MODE": "true"

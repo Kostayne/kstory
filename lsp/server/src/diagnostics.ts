@@ -3,6 +3,7 @@ import {
   DiagnosticSeverity,
 } from 'vscode-languageserver/node';
 import type { TextDocument } from 'vscode-languageserver-textdocument';
+import type { DocumentManager } from './documentManager';
 import { Logger } from './logger';
 
 const logger = Logger.getInstance();
@@ -36,24 +37,27 @@ export function createDiagnostic(
 function isInsideFunctionCall(line: string, charIndex: number): boolean {
   // Check if we're inside @call:function() or {call:function()}
   const beforeCursor = line.substring(0, charIndex);
-  
+
   // Check for @call:function()
   const atCallMatch = beforeCursor.match(ATCALL_PATTERN);
   if (atCallMatch) {
     return true;
   }
-  
+
   // Check for {call:function()
   const inlineCallMatch = beforeCursor.match(INLINE_CALL_PATTERN);
   if (inlineCallMatch) {
     return true;
   }
-  
+
   return false;
 }
 
 // Simple syntax validation
-export function validateDocument(document: TextDocument): Diagnostic[] {
+export function validateDocument(
+  document: TextDocument,
+  documentManager?: DocumentManager
+): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const text = document.getText();
   const lines = text.split('\n');
@@ -128,7 +132,9 @@ export function validateDocument(document: TextDocument): Diagnostic[] {
             line.indexOf(targetSection) + targetSection.length
           );
           diagnostics.push(diagnostic);
-          logger.warn(`Invalid section name "${targetSection}" at line ${lineIndex + 1}`);
+          logger.warn(
+            `Invalid section name "${targetSection}" at line ${lineIndex + 1}`
+          );
         }
       }
     }
@@ -137,7 +143,11 @@ export function validateDocument(document: TextDocument): Diagnostic[] {
     if (line.trim().startsWith('" ')) {
       // Replica is correct - starts properly
       // Don't check closing as replicas don't close explicitly
-    } else if (line.includes('"') && !line.trim().startsWith('" ') && !isInReplica) {
+    } else if (
+      line.includes('"') &&
+      !line.trim().startsWith('" ') &&
+      !isInReplica
+    ) {
       // Check each quote position to see if it's inside a function call
       let quoteIndex = -1;
       while ((quoteIndex = line.indexOf('"', quoteIndex + 1)) !== -1) {
@@ -152,7 +162,9 @@ export function validateDocument(document: TextDocument): Diagnostic[] {
               quoteIndex + 1
             );
             diagnostics.push(diagnostic);
-            logger.warn(`Incorrect replica start at line ${lineIndex + 1}, position ${quoteIndex + 1}`);
+            logger.warn(
+              `Incorrect replica start at line ${lineIndex + 1}, position ${quoteIndex + 1}`
+            );
             break; // Only report the first problematic quote
           }
         }
