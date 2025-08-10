@@ -23,7 +23,7 @@ Block text line 2
    line comment */
 
 == Section_Two
-" Text in second section
+" Text in second section /* asdasd */
 -> Section_One
 
 == Section-Three

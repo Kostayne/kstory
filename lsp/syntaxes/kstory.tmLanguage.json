@@ -55,10 +55,13 @@
 				{
 					"name": "string.quoted.double.kstory",
 					"begin": "\"\\s",
-					"end": "(?=\\s*->|\\s*=>|\\s*@|\\s*\"|$)",
+					"end": "(?=\\s*->|\\s*=>|\\s*@|\\s*\\+|\\s*==|$)",
 					"patterns": [
 						{
 							"include": "#inline-calls"
+						},
+						{
+							"include": "#comments"
 						}
 					]
 				}

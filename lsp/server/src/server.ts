@@ -5,16 +5,27 @@ import {
   TextDocuments,
 } from 'vscode-languageserver/node';
 import { TextDocument } from 'vscode-languageserver-textdocument';
+import { generateCompletions } from './completion';
+import { validateDocument } from './diagnostics';
+import { generateHover } from './hover';
+import { Logger, LogLevel } from './logger';
 
-console.log('KStory LSP Server: Starting server...');
+const logger = Logger.getInstance();
+
+// Set log level based on environment
+if (process.env.VSCODE_DEBUG_MODE === 'true') {
+  logger.setLogLevel(LogLevel.DEBUG);
+}
+
+logger.info('Starting server...');
 
 const connection = createConnection();
 
 const documents = new TextDocuments(TextDocument);
 
 connection.onInitialize((params) => {
-  console.log('KStory LSP Server: Initializing...');
-  
+  logger.info('Initializing...');
+
   const capabilities = params.capabilities;
 
   const result: InitializeResult = {
@@ -22,30 +33,74 @@ connection.onInitialize((params) => {
       textDocumentSync: TextDocumentSyncKind.Full,
       completionProvider: {
         resolveProvider: false,
+        triggerCharacters: ['@', '+', '=', '-', '"', '{'],
       },
+      hoverProvider: true,
     },
   };
 
-  console.log('KStory LSP Server: Initialization complete');
+  logger.info('Initialization complete');
   return result;
 });
 
 connection.onInitialized(() => {
-  console.log('KStory LSP Server: Server initialized successfully');
+  logger.info('Server initialized successfully');
 });
 
-// Обработка открытия документов
+// Autocompletion
+connection.onCompletion((params) => {
+  const document = documents.get(params.textDocument.uri);
+  if (!document) {
+    logger.warn(`Document not found: ${params.textDocument.uri}`);
+    return [];
+  }
+
+  return generateCompletions(params, document);
+});
+
+// Hover
+connection.onHover((params) => {
+  const document = documents.get(params.textDocument.uri);
+  if (!document) {
+    logger.warn(`Document not found for hover: ${params.textDocument.uri}`);
+    return null;
+  }
+
+  return generateHover(params, document);
+});
+
+// Handle document opening
 documents.onDidOpen((event) => {
-  console.log('KStory LSP Server: Document opened:', event.document.uri);
+  logger.info(`Document opened: ${event.document.uri}`);
+  const diagnostics = validateDocument(event.document);
+  connection.sendDiagnostics({
+    uri: event.document.uri,
+    diagnostics,
+  });
 });
 
-// Обработка закрытия документов
+// Handle document changes
+documents.onDidChangeContent((event) => {
+  logger.debug(`Document changed: ${event.document.uri}`);
+  const diagnostics = validateDocument(event.document);
+  connection.sendDiagnostics({
+    uri: event.document.uri,
+    diagnostics,
+  });
+});
+
+// Handle document closing
 documents.onDidClose((event) => {
-  console.log('KStory LSP Server: Document closed:', event.document.uri);
+  logger.info(`Document closed: ${event.document.uri}`);
+  // Clear diagnostics when closing
+  connection.sendDiagnostics({
+    uri: event.document.uri,
+    diagnostics: [],
+  });
 });
 
 documents.listen(connection);
 
 connection.listen();
 
-console.log('KStory LSP Server: Server is now listening');
+logger.info('Server is now listening');
