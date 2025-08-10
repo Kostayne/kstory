@@ -5,6 +5,26 @@ import { Logger } from './logger';
 
 const logger = Logger.getInstance();
 
+// Check if we're inside a function call
+function isInsideFunctionCall(line: string, charIndex: number): boolean {
+  // Check if we're inside @call:function() or {call:function()}
+  const beforeCursor = line.substring(0, charIndex);
+  
+  // Check for @call:function()
+  const atCallMatch = beforeCursor.match(/@call:\w*\([^)]*$/);
+  if (atCallMatch) {
+    return true;
+  }
+  
+  // Check for {call:function()
+  const inlineCallMatch = beforeCursor.match(/\{call:\w*\([^)]*$/);
+  if (inlineCallMatch) {
+    return true;
+  }
+  
+  return false;
+}
+
 // Get all sections from document
 export function getSections(document: TextDocument): string[] {
   const sections: string[] = [];
@@ -122,8 +142,8 @@ export function generateCompletions(
     });
   }
 
-  // Replica starts with " and space, doesn't close explicitly
-  if (currentChar === '"') {
+  // Replica starts with " and space, doesn't close explicitly, but not inside function calls
+  if (currentChar === '"' && !isInsideFunctionCall(currentLine, params.position.character)) {
     completions.push({
       label: '" ',
       kind: CompletionItemKind.Text,

@@ -4,6 +4,26 @@ import { Logger } from './logger';
 
 const logger = Logger.getInstance();
 
+// Check if we're inside a function call
+function isInsideFunctionCall(line: string, charIndex: number): boolean {
+  // Check if we're inside @call:function() or {call:function()}
+  const beforeCursor = line.substring(0, charIndex);
+  
+  // Check for @call:function()
+  const atCallMatch = beforeCursor.match(/@call:\w*\([^)]*$/);
+  if (atCallMatch) {
+    return true;
+  }
+  
+  // Check for {call:function()
+  const inlineCallMatch = beforeCursor.match(/\{call:\w*\([^)]*$/);
+  if (inlineCallMatch) {
+    return true;
+  }
+  
+  return false;
+}
+
 // Get section information at position
 function getSectionAtPosition(
   document: TextDocument,
@@ -171,7 +191,8 @@ export function generateHover(
     };
   }
 
-  if (currentChar === '"') {
+  // Replica starts with " and space, but not inside function calls
+  if (currentChar === '"' && !isInsideFunctionCall(currentLine, params.position.character)) {
     return {
       contents: {
         kind: 'markdown',

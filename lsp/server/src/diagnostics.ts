@@ -1,6 +1,6 @@
 import {
-    type Diagnostic,
-    DiagnosticSeverity,
+  type Diagnostic,
+  DiagnosticSeverity,
 } from 'vscode-languageserver/node';
 import type { TextDocument } from 'vscode-languageserver-textdocument';
 import { Logger } from './logger';
@@ -24,6 +24,26 @@ export function createDiagnostic(
     message,
     source: 'kstory',
   };
+}
+
+// Check if we're inside a function call
+function isInsideFunctionCall(line: string, charIndex: number): boolean {
+  // Check if we're inside @call:function() or {call:function()}
+  const beforeCursor = line.substring(0, charIndex);
+  
+  // Check for @call:function()
+  const atCallMatch = beforeCursor.match(/@call:\w*\([^)]*$/);
+  if (atCallMatch) {
+    return true;
+  }
+  
+  // Check for {call:function()
+  const inlineCallMatch = beforeCursor.match(/\{call:\w*\([^)]*$/);
+  if (inlineCallMatch) {
+    return true;
+  }
+  
+  return false;
 }
 
 // Simple syntax validation
@@ -102,34 +122,34 @@ export function validateDocument(document: TextDocument): Diagnostic[] {
             line.indexOf(targetSection) + targetSection.length
           );
           diagnostics.push(diagnostic);
-          logger.warn(
-            `Invalid section name "${targetSection}" at line ${lineIndex + 1}`
-          );
+          logger.warn(`Invalid section name "${targetSection}" at line ${lineIndex + 1}`);
         }
       }
     }
 
-    // Check replicas - they start with " and space
+    // Check replicas - they start with " and space, but not inside function calls
     if (line.trim().startsWith('" ')) {
       // Replica is correct - starts properly
       // Don't check closing as replicas don't close explicitly
-    } else if (
-      line.includes('"') &&
-      !line.trim().startsWith('" ') &&
-      !isInReplica
-    ) {
-      // Quote exists but not at replica start and not inside replica - possible error
-      const quoteIndex = line.indexOf('"');
-      if (quoteIndex > 0 && line[quoteIndex - 1] !== ' ') {
-        const diagnostic = createDiagnostic(
-          'Replica should start with " and space',
-          DiagnosticSeverity.Warning,
-          lineIndex,
-          quoteIndex,
-          quoteIndex + 1
-        );
-        diagnostics.push(diagnostic);
-        logger.warn(`Incorrect replica start at line ${lineIndex + 1}`);
+    } else if (line.includes('"') && !line.trim().startsWith('" ') && !isInReplica) {
+      // Check each quote position to see if it's inside a function call
+      let quoteIndex = -1;
+      while ((quoteIndex = line.indexOf('"', quoteIndex + 1)) !== -1) {
+        if (!isInsideFunctionCall(line, quoteIndex)) {
+          // Quote exists but not at replica start, not inside replica, and not inside function call - possible error
+          if (quoteIndex > 0 && line[quoteIndex - 1] !== ' ') {
+            const diagnostic = createDiagnostic(
+              'Replica should start with " and space',
+              DiagnosticSeverity.Warning,
+              lineIndex,
+              quoteIndex,
+              quoteIndex + 1
+            );
+            diagnostics.push(diagnostic);
+            logger.warn(`Incorrect replica start at line ${lineIndex + 1}, position ${quoteIndex + 1}`);
+            break; // Only report the first problematic quote
+          }
+        }
       }
     }
   });
