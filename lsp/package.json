@@ -24,7 +24,15 @@
 		"languages": [
 			{
 				"id": "kstory",
-				"extensions": [".ks"]
+				"extensions": [".ks"],
+				"configuration": "./language-configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "kstory",
+				"scopeName": "source.kstory",
+				"path": "./syntaxes/kstory.tmLanguage.json"
 			}
 		]
 	},

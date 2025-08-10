@@ -12,24 +12,12 @@
 		{ "open": "{", "close": "}" },
 		{ "open": "[", "close": "]" },
 		{ "open": "(", "close": ")" },
-		{ "open": "\"", "close": "\"", "notIn": ["string"] },
-		{ "open": "'", "close": "'", "notIn": ["string"] }
+		{ "open": "\"", "close": "\"" }
 	],
 	"surroundingPairs": [
 		["{", "}"],
 		["[", "]"],
 		["(", ")"],
-		["\"", "\""],
-		["'", "'"]
-	],
-	"indentationRules": {
-		"increaseIndentPattern": "^(\\s*\\+.*|\\s*==.*|\\s*@.*|\\s*\"\\s.*)$",
-		"decreaseIndentPattern": "^(\\s*->.*|\\s*=>.*)$"
-	},
-	"folding": {
-		"markers": {
-			"start": "^\\s*==\\s*",
-			"end": "^\\s*==\\s*"
-		}
-	}
+		["\"", "\""]
+	]
 }

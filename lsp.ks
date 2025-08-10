@@ -2,7 +2,7 @@
 @@choiceFirst enabled
 # Top-level tags should highlight
 
-== Section_One   # header comment after name
+== Section_One # header comment after name
 
 " Hello {call:inner("x, y", nested(2))} world
 -> Section_Two, Section-Three
