@@ -29,3 +29,7 @@ Block text line 2
 == Section-Three
 # Comment before goto
 => Section_One
+
+== Test_Section_AB
+
+-> Test_Section_AB

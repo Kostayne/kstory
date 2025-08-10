@@ -1,8 +1,10 @@
 import type {
-    Definition,
-    Location,
-    ReferenceParams,
-    TextDocumentPositionParams,
+  Definition,
+  Location,
+  ReferenceParams,
+  RenameParams,
+  TextDocumentPositionParams,
+  WorkspaceEdit,
 } from 'vscode-languageserver/node';
 import type { TextDocument } from 'vscode-languageserver-textdocument';
 import { Logger } from './logger';
@@ -175,4 +177,99 @@ export function generateReferences(
   );
 
   return references;
+}
+
+// Generate rename workspace edit
+export function generateRename(
+  params: RenameParams,
+  document: TextDocument
+): WorkspaceEdit | null {
+  const text = document.getText();
+  const lines = text.split('\n');
+  const changes: { [uri: string]: any[] } = {};
+  const edits: any[] = [];
+
+  // First, try to get section name from position
+  let sectionName = getSectionNameAtPosition(document, params.position);
+  
+  // If not found, try to find section name from the current line
+  if (!sectionName) {
+    const currentLine = lines[params.position.line];
+    
+    // Check if we're on a section line
+    if (currentLine.trim().startsWith('==')) {
+      sectionName = currentLine.trim().substring(2).trim();
+    }
+    // Check if we're on a goto line
+    else if (currentLine.includes('->') || currentLine.includes('=>')) {
+      const gotoMatch = currentLine.match(GOTO_PATTERN);
+      if (gotoMatch) {
+        sectionName = gotoMatch[1];
+      }
+    }
+  }
+
+  if (!sectionName) {
+    logger.debug(
+      `No section name found at position ${params.position.line + 1}:${params.position.character}`
+    );
+    return null;
+  }
+
+  logger.debug(`Renaming section: ${sectionName} -> ${params.newName}`);
+
+  // Find ALL occurrences of the section name in the document
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Check for section definition (== SectionName)
+    if (line.trim().startsWith('==')) {
+      const name = line.trim().substring(2).trim();
+      if (name === sectionName) {
+        const startChar = line.indexOf(sectionName);
+        edits.push({
+          range: {
+            start: { line: i, character: startChar },
+            end: { line: i, character: startChar + sectionName.length },
+          },
+          newText: params.newName,
+        });
+        logger.debug(`Found section definition at line ${i + 1}`);
+      }
+    }
+
+    // Check for goto references (-> SectionName or => SectionName)
+    if (line.includes('->') || line.includes('=>')) {
+      const gotoMatches = line.matchAll(GOTO_MATCH_ALL_PATTERN);
+      for (const match of gotoMatches) {
+        const targetSection = match[1];
+        if (targetSection === sectionName) {
+          const startChar = line.indexOf(targetSection);
+          edits.push({
+            range: {
+              start: { line: i, character: startChar },
+              end: { line: i, character: startChar + targetSection.length },
+            },
+            newText: params.newName,
+          });
+          logger.debug(`Found goto reference at line ${i + 1}`);
+        }
+      }
+    }
+  }
+
+  if (edits.length === 0) {
+    logger.warn(`No occurrences found for section: ${sectionName}`);
+    return null;
+  }
+
+  changes[document.uri] = edits;
+
+  logger.info(
+    `Renamed section "${sectionName}" to "${params.newName}" in ${edits.length} locations`
+  );
+
+  return {
+    changes,
+  };
 }

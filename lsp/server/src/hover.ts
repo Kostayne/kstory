@@ -113,7 +113,9 @@ export function generateHover(
           `== ${section.name}`,
           '" Some content',
           '-> OtherSection',
-          '```'
+          '```',
+          '',
+          '**Tip:** Right-click and select "Rename Symbol" to rename this section and update all references.'
         ].join('\n')
       }
     };
@@ -141,7 +143,9 @@ export function generateHover(
           '**Alternative syntax:**',
           '```kstory',
           `=> ${goto.target}`,
-          '```'
+          '```',
+          '',
+          '**Tip:** Right-click and select "Rename Symbol" to rename this section and update all references.'
         ].join('\n')
       }
     };

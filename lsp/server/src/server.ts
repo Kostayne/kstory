@@ -10,7 +10,7 @@ import { generateCompletions } from './completion';
 import { validateDocument } from './diagnostics';
 import { generateHover } from './hover';
 import { Logger, LogLevel } from './logger';
-import { generateDefinition, generateReferences } from './navigation';
+import { generateDefinition, generateReferences, generateRename } from './navigation';
 import { generateDocumentSymbols } from './symbols';
 
 const logger = Logger.getInstance();
@@ -45,6 +45,7 @@ connection.onInitialize((params) => {
       codeActionProvider: {
         codeActionKinds: ['quickfix', 'refactor'],
       },
+      renameProvider: true,
     },
   };
 
@@ -126,6 +127,19 @@ connection.onCodeAction((params) => {
   }
 
   return generateCodeActions(document, params.range, params.context);
+});
+
+// Rename
+connection.onRenameRequest((params) => {
+  const document = documents.get(params.textDocument.uri);
+  if (!document) {
+    logger.warn(
+      `Document not found for rename: ${params.textDocument.uri}`
+    );
+    return null;
+  }
+
+  return generateRename(params, document);
 });
 
 // Handle document opening
