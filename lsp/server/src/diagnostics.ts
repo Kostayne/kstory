@@ -7,6 +7,12 @@ import { Logger } from './logger';
 
 const logger = Logger.getInstance();
 
+// Regular expressions - defined once for performance
+const GOTO_PATTERN = /(?:->|=>)\s*([^,\s]+)/;
+const ATCALL_PATTERN = /@call:\w*\([^)]*$/;
+const INLINE_CALL_PATTERN = /\{call:\w*\([^)]*$/;
+const SECTION_NAME_PATTERN = /^[a-zA-Z]/;
+
 // Function to create diagnostics
 export function createDiagnostic(
   message: string,
@@ -32,13 +38,13 @@ function isInsideFunctionCall(line: string, charIndex: number): boolean {
   const beforeCursor = line.substring(0, charIndex);
   
   // Check for @call:function()
-  const atCallMatch = beforeCursor.match(/@call:\w*\([^)]*$/);
+  const atCallMatch = beforeCursor.match(ATCALL_PATTERN);
   if (atCallMatch) {
     return true;
   }
   
   // Check for {call:function()
-  const inlineCallMatch = beforeCursor.match(/\{call:\w*\([^)]*$/);
+  const inlineCallMatch = beforeCursor.match(INLINE_CALL_PATTERN);
   if (inlineCallMatch) {
     return true;
   }
@@ -109,11 +115,11 @@ export function validateDocument(document: TextDocument): Diagnostic[] {
 
     // Check goto
     if (line.includes('->') || line.includes('=>')) {
-      const gotoMatch = line.match(/(?:->|=>)\s*([^,\s]+)/);
+      const gotoMatch = line.match(GOTO_PATTERN);
       if (gotoMatch) {
         const targetSection = gotoMatch[1];
         // Simple check - section should start with letter
-        if (!/^[a-zA-Z]/.test(targetSection)) {
+        if (!SECTION_NAME_PATTERN.test(targetSection)) {
           const diagnostic = createDiagnostic(
             `Invalid section name: ${targetSection}`,
             DiagnosticSeverity.Warning,

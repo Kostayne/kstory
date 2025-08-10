@@ -5,19 +5,23 @@ import { Logger } from './logger';
 
 const logger = Logger.getInstance();
 
+// Regular expressions - defined once for performance
+const ATCALL_PATTERN = /@call:\w*\([^)]*$/;
+const INLINE_CALL_PATTERN = /\{call:\w*\([^)]*$/;
+
 // Check if we're inside a function call
 function isInsideFunctionCall(line: string, charIndex: number): boolean {
   // Check if we're inside @call:function() or {call:function()}
   const beforeCursor = line.substring(0, charIndex);
   
   // Check for @call:function()
-  const atCallMatch = beforeCursor.match(/@call:\w*\([^)]*$/);
+  const atCallMatch = beforeCursor.match(ATCALL_PATTERN);
   if (atCallMatch) {
     return true;
   }
   
   // Check for {call:function()
-  const inlineCallMatch = beforeCursor.match(/\{call:\w*\([^)]*$/);
+  const inlineCallMatch = beforeCursor.match(INLINE_CALL_PATTERN);
   if (inlineCallMatch) {
     return true;
   }

@@ -4,19 +4,25 @@ import { Logger } from './logger';
 
 const logger = Logger.getInstance();
 
+// Regular expressions - defined once for performance
+const GOTO_PATTERN = /(?:->|=>)\s*([^,\s]+)/;
+const ATCALL_PATTERN = /@call:\w*\([^)]*$/;
+const INLINE_CALL_PATTERN = /\{call:\w*\([^)]*$/;
+const GOTO_SECTION_PATTERN = /(?:->|=>)\s*([^,\s]+)$/;
+
 // Check if we're inside a function call
 function isInsideFunctionCall(line: string, charIndex: number): boolean {
   // Check if we're inside @call:function() or {call:function()}
   const beforeCursor = line.substring(0, charIndex);
   
   // Check for @call:function()
-  const atCallMatch = beforeCursor.match(/@call:\w*\([^)]*$/);
+  const atCallMatch = beforeCursor.match(ATCALL_PATTERN);
   if (atCallMatch) {
     return true;
   }
   
   // Check for {call:function()
-  const inlineCallMatch = beforeCursor.match(/\{call:\w*\([^)]*$/);
+  const inlineCallMatch = beforeCursor.match(INLINE_CALL_PATTERN);
   if (inlineCallMatch) {
     return true;
   }
@@ -55,7 +61,7 @@ function getGotoTarget(
   
   // Check if we're on a goto line
   if (currentLine.includes('->') || currentLine.includes('=>')) {
-    const gotoMatch = currentLine.match(/(?:->|=>)\s*([^,\s]+)/);
+    const gotoMatch = currentLine.match(GOTO_PATTERN);
     if (gotoMatch) {
       const targetSection = gotoMatch[1];
       return { target: targetSection, line: position.line };
@@ -239,7 +245,7 @@ export function generateHover(
 
   // Hover for section references in goto
   const lineBeforeCursor = currentLine.substring(0, params.position.character);
-  const gotoMatch = lineBeforeCursor.match(/(?:->|=>)\s*([^,\s]+)$/);
+  const gotoMatch = lineBeforeCursor.match(GOTO_SECTION_PATTERN);
   if (gotoMatch) {
     const targetSection = gotoMatch[1];
     const exists = sectionExists(document, targetSection);
