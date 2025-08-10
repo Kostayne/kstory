@@ -6,7 +6,19 @@
     "module": "esnext",
     "moduleResolution": "node",
     "sourceMap": true,
-    "inlineSources": true
+    "inlineSources": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@/ast": ["src/ast.ts"],
+      "@/lexer": ["src/lexer.ts"],
+      "@/parser": ["src/parser.ts"],
+      "@/token": ["src/token.ts"],
+      "@/tokenFactory": ["src/tokenFactory.ts"],
+      "@/validator": ["src/validator.ts"],
+      "@/utils/*": ["src/utils/*"],
+      "@/tests/*": ["tests/*"]
+    }
   },
 
   "exclude": ["node_modules", "dist"]

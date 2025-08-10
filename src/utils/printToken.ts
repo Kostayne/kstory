@@ -1,4 +1,4 @@
-import { type Token, TokenTypes } from '../token';
+import { type Token, TokenTypes } from '@/token';
 
 export const printToken = (token: Token<unknown>) => {
   let msg = `Type: ${token.type}`;

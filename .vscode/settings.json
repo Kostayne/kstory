@@ -10,5 +10,8 @@
 
   "[json]": {
     "editor.defaultFormatter": null
-  }
+  },
+  "cSpell.words": [
+    "kstory"
+  ]
 }

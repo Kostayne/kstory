@@ -7,6 +7,34 @@
       "path": "tools/vscode-kstory",
       "problemMatcher": [],
       "label": "npm: build (kstory-language-client)"
+    },
+    {
+      "type": "npm",
+      "script": "compile",
+      "path": "lsp",
+      "group": "build",
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "never"
+      },
+      "problemMatcher": ["$tsc"],
+      "label": "compile-lsp"
+    },
+    {
+      "type": "npm",
+      "script": "watch",
+      "path": "lsp",
+      "isBackground": true,
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "never"
+      },
+      "problemMatcher": ["$tsc-watch"],
+      "label": "watch-lsp"
     }
   ]
 }

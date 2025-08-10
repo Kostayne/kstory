@@ -1,23 +1,43 @@
 {
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "Run KStory Client",
-      "type": "extensionHost",
-      "request": "launch",
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen",
-      "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/tools/vscode-kstory",
-        "--new-window",
-        "${workspaceFolder}/test.ks"
-      ],
-      "outFiles": [
-        "${workspaceFolder}/tools/vscode-kstory/dist/**/*.js"
-      ],
-      "preLaunchTask": "npm: build (kstory-language-client)"
-    }
-  ]
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"type": "extensionHost",
+			"request": "launch",
+			"name": "Launch KStory LSP Extension",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/lsp",
+				"${workspaceRoot}/lsp.ks"
+			],
+			"outFiles": [
+				"${workspaceRoot}/lsp/client/out/**/*.js",
+				"${workspaceRoot}/lsp/server/out/**/*.js"
+			],
+			"autoAttachChildProcesses": true,
+			"preLaunchTask": "compile-lsp",
+			"env": {
+				"VSCODE_DEBUG_MODE": "true"
+			}
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
+			"name": "Launch KStory LSP Extension (Watch)",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/lsp",
+				"${workspaceRoot}/lsp.ks"
+			],
+			"outFiles": [
+				"${workspaceRoot}/lsp/client/out/**/*.js",
+				"${workspaceRoot}/lsp/server/out/**/*.js"
+			],
+			"autoAttachChildProcesses": true,
+			"preLaunchTask": "watch-lsp",
+			"env": {
+				"VSCODE_DEBUG_MODE": "true"
+			}
+		}
+	]
 }
-
-

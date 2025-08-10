@@ -1,0 +1,39 @@
+{
+	"compilerOptions": {
+		"module": "commonjs",
+		"target": "ES2024",
+		"lib": [
+			"ES2024"
+		],
+		"outDir": "out",
+		"rootDir": "src",
+		"sourceMap": true,
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["../src/*"],
+			"@/ast": ["../src/ast.ts"],
+			"@/lexer": ["../src/lexer.ts"],
+			"@/parser": ["../src/parser.ts"],
+			"@/token": ["../src/token.ts"],
+			"@/tokenFactory": ["../src/tokenFactory.ts"],
+			"@/validator": ["../src/validator.ts"],
+			"@/utils/*": ["../src/utils/*"],
+			"@/tests/*": ["../tests/*"]
+		}
+	},
+	"include": [
+		"src"
+	],
+	"exclude": [
+		"node_modules",
+		".vscode-test"
+	],
+	"references": [
+		{
+			"path": "./client"
+		},
+		{
+			"path": "./server"
+		}
+	]
+}
