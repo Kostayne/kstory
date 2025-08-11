@@ -1,27 +1,27 @@
 import { type Token, type TokenType, TokenTypes } from '@/token';
 import {
-    callArgumentToken,
-    callToken,
-    choiceTagToken,
-    choiceTextBoundToken,
-    choiceTextToken,
-    choiceToken,
-    commentContentToken,
-    commentToken,
-    dedentToken,
-    eofToken,
-    gotoToken,
-    identifierToken,
-    indentToken,
-    multiCommentBeginToken,
-    multiCommentEndToken,
-    newLineToken,
-    replicaBeginToken,
-    replicaEndToken,
-    sectionToken,
-    stringToken,
-    tagToken,
-    tagValueToken,
+  callArgumentToken,
+  callToken,
+  choiceTagToken,
+  choiceTextBoundToken,
+  choiceTextToken,
+  choiceToken,
+  commentContentToken,
+  commentToken,
+  dedentToken,
+  eofToken,
+  gotoToken,
+  identifierToken,
+  indentToken,
+  multiCommentBeginToken,
+  multiCommentEndToken,
+  newLineToken,
+  replicaBeginToken,
+  replicaEndToken,
+  sectionToken,
+  stringToken,
+  tagToken,
+  tagValueToken,
 } from '@/tokenFactory';
 
 const INDENT_WIDTH = 2;
@@ -74,8 +74,18 @@ export class Lexer {
   }
 
   public process() {
-    while (this.curChar) {
+    let iterations = 0;
+    const maxIterations = 100000; // Защита от бесконечного цикла
+
+    while (this.curChar && iterations < maxIterations) {
       this.handleCurrentToken();
+      iterations++;
+    }
+
+    if (iterations >= maxIterations) {
+      console.error('Error: Lexer exceeded max iterations, possible infinite loop detected');
+      console.error(`Last position: ${this.position}, line: ${this.curLine}, column: ${this.curColumn}, char: '${this.curChar}'`);
+      throw new Error(`Lexer exceeded max iterations at position ${this.position}, line ${this.curLine}, column ${this.curColumn}`);
     }
 
     this.push(eofToken());
@@ -163,20 +173,27 @@ export class Lexer {
     const startColumn = this.curColumn;
     const content = this.readLineUntilComment();
 
-    this.step();
+    // Не делаем дополнительный step(), так как readLineUntilComment() уже продвигает позицию
     this.pushAt(identifierToken(content), startLine, startColumn);
   }
 
   private handleError() {
     let content = '';
+    let iterations = 0;
+    const maxIterations = 1000; // Защита от бесконечного цикла
 
-    while (!this.getTokenType()) {
+    while (!this.getTokenType() && iterations < maxIterations) {
       if (this.curChar === undefined) {
         break;
       }
 
       content += this.curChar;
       this.step();
+      iterations++;
+    }
+
+    if (iterations >= maxIterations) {
+      console.warn('Warning: handleError() exceeded max iterations');
     }
 
     if (content.trim().length > 0) {
@@ -287,14 +304,21 @@ export class Lexer {
 
   private handleChoiceTextExtend(isInlined = false) {
     let content = '';
+    let iterations = 0;
+    const maxIterations = 10000; // Защита от бесконечного цикла
 
-    while (this.curChar) {
+    while (this.curChar && iterations < maxIterations) {
       if (this.isChoiceTextEnding()) {
         this.finalizeChoiceText(content, isInlined);
         return;
       }
 
       content = this.processChoiceTextContent(content);
+      iterations++;
+    }
+
+    if (iterations >= maxIterations) {
+      console.warn('Warning: handleChoiceTextExtend() exceeded max iterations');
     }
 
     this.finalizeChoiceText(content, isInlined);
@@ -425,8 +449,10 @@ export class Lexer {
     let inQuotes = false;
     let argStartLine = this.curLine;
     let argStartColumn = this.curColumn;
+    let iterations = 0;
+    const maxIterations = 10000; // Защита от бесконечного цикла
 
-    while (this.curChar && depth > 0) {
+    while (this.curChar && depth > 0 && iterations < maxIterations) {
       if (this.curChar === '"' && !this.isEscapedChar()) {
         inQuotes = !inQuotes;
       }
@@ -447,12 +473,18 @@ export class Lexer {
           this.step();
           argStartLine = this.curLine;
           argStartColumn = this.curColumn;
+          iterations++;
           continue;
         }
       }
 
       currentArg += this.curChar;
       this.step();
+      iterations++;
+    }
+
+    if (iterations >= maxIterations) {
+      console.warn('Warning: handleCallArguments() exceeded max iterations');
     }
 
     if (currentArg.trim().length > 0) {
@@ -462,8 +494,10 @@ export class Lexer {
 
   private getTagName() {
     let tagName = '';
+    let iterations = 0;
+    const maxIterations = 1000; // Защита от бесконечного цикла
 
-    while (this.curChar) {
+    while (this.curChar && iterations < maxIterations) {
       tagName += this.curChar;
 
       if (this.isWhitespace(1) || this.isNewLine(1)) {
@@ -471,6 +505,11 @@ export class Lexer {
       }
 
       this.step();
+      iterations++;
+    }
+
+    if (iterations >= maxIterations) {
+      console.warn('Warning: getTagName() exceeded max iterations');
     }
 
     this.step();
@@ -479,18 +518,25 @@ export class Lexer {
 
   private getTagValue() {
     let value = '';
+    let iterations = 0;
+    const maxIterations = 1000; // Защита от бесконечного цикла
 
     if (this.getTokenType(0)) {
       return value;
     }
 
-    while (this.curChar) {
+    while (this.curChar && iterations < maxIterations) {
       if (this.getTokenType(1) || this.isEOF(1)) {
         break;
       }
 
       this.step();
       value += this.curChar;
+      iterations++;
+    }
+
+    if (iterations >= maxIterations) {
+      console.warn('Warning: getTagValue() exceeded max iterations');
     }
 
     this.step();
@@ -519,15 +565,27 @@ export class Lexer {
     let result = '{call:';
     this.step(INLINE_CALL_PREFIX_LENGTH);
     // Read function name
-    while (this.curChar && this.curChar !== '(' && this.curChar !== '}') {
+    let iterations = 0;
+    const maxIterations = 1000; // Защита от бесконечного цикла
+    
+    while (this.curChar && this.curChar !== '(' && this.curChar !== '}' && iterations < maxIterations) {
       result += this.curChar;
       this.step();
+      iterations++;
     }
+    
+    if (iterations >= maxIterations) {
+      console.warn('Warning: handleInlineCall() function name reading exceeded max iterations');
+    }
+    
     if (this.curChar === '(') {
       result += this.curChar;
       this.step();
       let depth = 1;
-      while (this.curChar && depth > 0) {
+      let parenIterations = 0;
+      const maxParenIterations = 10000; // Защита от бесконечного цикла
+      
+      while (this.curChar && depth > 0 && parenIterations < maxParenIterations) {
         result += this.curChar;
         if (this.curChar === '(' && !this.isEscapedChar()) {
           depth++;
@@ -535,6 +593,11 @@ export class Lexer {
           depth--;
         }
         this.step();
+        parenIterations++;
+      }
+      
+      if (parenIterations >= maxParenIterations) {
+        console.warn('Warning: handleInlineCall() parentheses processing exceeded max iterations');
       }
     }
     if (this.curChar === '}') {
@@ -589,6 +652,9 @@ export class Lexer {
       this.isReplicaBegin() ||
       this.isTag() ||
       this.isChoiceTag() ||
+      this.isGoto() ||
+      this.isChoice() ||
+      this.isSection() ||
       this.isEOF()
     );
   }
@@ -610,11 +676,14 @@ export class Lexer {
 
   private processReplicaContent(content: string): string {
     let isReplicaEnding = false;
+    let iterations = 0;
+    const maxIterations = 10000; // Защита от бесконечного цикла
 
-    while (this.curChar) {
+    while (this.curChar && iterations < maxIterations) {
       if (this.isInlineCall()) {
         this.addStringTokenIfNotEmpty(content);
         content = this.handleInlineCall();
+        iterations++;
         continue;
       }
 
@@ -634,6 +703,11 @@ export class Lexer {
       }
 
       this.step();
+      iterations++;
+    }
+
+    if (iterations >= maxIterations) {
+      console.warn('Warning: processReplicaContent() exceeded max iterations');
     }
 
     this.step();
@@ -672,8 +746,10 @@ export class Lexer {
     }
 
     let spaces = 0;
+    let iterations = 0;
+    const maxIterations = 1000; // Защита от бесконечного цикла
 
-    while (this.curChar && this.isWhitespace()) {
+    while (this.curChar && this.isWhitespace() && iterations < maxIterations) {
       if (this.isNewLine()) {
         break;
       }
@@ -687,6 +763,11 @@ export class Lexer {
       }
 
       this.step();
+      iterations++;
+    }
+
+    if (iterations >= maxIterations) {
+      console.warn('Warning: handleIndent() exceeded max iterations');
     }
 
     let indentDiff = Math.floor((spaces - this.prevIndent) / INDENT_WIDTH);
@@ -746,6 +827,8 @@ export class Lexer {
 
   private handleMultiCommentExtend() {
     let content = '';
+    let iterations = 0;
+    const maxIterations = 10000; // Защита от бесконечного цикла
 
     // check cur char
     if (this.isMultiCommentEnd()) {
@@ -760,7 +843,7 @@ export class Lexer {
     }
 
     // check next char
-    while (this.curChar) {
+    while (this.curChar && iterations < maxIterations) {
       content += this.curChar;
 
       if (this.isEndOfLine(1) || this.isMultiCommentEnd(1)) {
@@ -768,6 +851,11 @@ export class Lexer {
       }
 
       this.step();
+      iterations++;
+    }
+
+    if (iterations >= maxIterations) {
+      console.warn('Warning: handleMultiCommentExtend() exceeded max iterations');
     }
 
     // adding comment content
@@ -885,7 +973,7 @@ export class Lexer {
   private isFirstOnLine(offset = 0) {
     let prevPos = offset - 1;
 
-    while (true) {
+    while (prevPos >= 0) {
       if (this.isEOF(prevPos) || this.isNewLine(prevPos)) {
         return true;
       }
@@ -896,6 +984,8 @@ export class Lexer {
 
       prevPos--;
     }
+
+    return true; // Достигли начала файла
   }
 
   private readLine() {
@@ -911,14 +1001,21 @@ export class Lexer {
 
   private readLineUntilComment() {
     let content = '';
+    let iterations = 0;
+    const maxIterations = 1000; // Защита от бесконечного цикла
 
-    while (this.curChar && !this.isEndOfLine()) {
+    while (this.curChar && !this.isEndOfLine() && iterations < maxIterations) {
       if (this.isComment() || this.isMultiComment()) {
         break;
       }
 
       content += this.curChar;
       this.step();
+      iterations++;
+    }
+
+    if (iterations >= maxIterations) {
+      console.warn('Warning: readLineUntilComment() exceeded max iterations');
     }
 
     return content;

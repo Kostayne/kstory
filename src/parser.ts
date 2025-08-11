@@ -184,12 +184,14 @@ export const parseSimpleStatements = (
 ): AstStatement[] => {
   const result: AstStatement[] = [];
   let currentIndex = 0;
+  let iterations = 0;
+  const maxIterations = tokens.length * 2; // Защита от бесконечного цикла
   // Regular tags meant for the very next statement
   let pendingTags: AstTag[] = [];
   // Choice-only tags (begin with @@) meant for the next Choice node
   let pendingChoiceTags: AstTag[] = [];
 
-  while (currentIndex < tokens.length) {
+  while (currentIndex < tokens.length && iterations < maxIterations) {
     // Current token under consideration
     const currentToken = tokens[currentIndex];
 
@@ -200,6 +202,12 @@ export const parseSimpleStatements = (
       );
       pendingTags.push(...tags);
       currentIndex += nextStartIndex;
+      // Защита от застревания - если nextStartIndex равен 0
+      if (nextStartIndex === 0) {
+        currentIndex++;
+        console.warn('Warning: collectLeadingTags returned nextStartIndex=0, forcing increment');
+      }
+      iterations++;
       continue;
     }
 
@@ -210,6 +218,12 @@ export const parseSimpleStatements = (
       );
       pendingChoiceTags.push(...tags);
       currentIndex += nextStartIndex;
+      // Защита от застревания - если nextStartIndex равен 0
+      if (nextStartIndex === 0) {
+        currentIndex++;
+        console.warn('Warning: collectLeadingChoiceTags returned nextStartIndex=0, forcing increment');
+      }
+      iterations++;
       continue;
     }
 
@@ -220,6 +234,7 @@ export const parseSimpleStatements = (
       currentToken.type === TokenTypes.COMMENT_CONTENT
     ) {
       currentIndex++;
+      iterations++;
       continue;
     }
 
@@ -236,6 +251,7 @@ export const parseSimpleStatements = (
       pendingTags = [];
       pendingChoiceTags = [];
       currentIndex = nextIndex;
+      iterations++;
       continue;
     }
 
@@ -252,6 +268,7 @@ export const parseSimpleStatements = (
           });
         // sync: skip to end of line/body
         currentIndex++;
+        iterations++;
         continue;
       }
       result.push({
@@ -263,6 +280,7 @@ export const parseSimpleStatements = (
       });
       pendingTags = [];
       currentIndex += GOTO_TOKENS_CONSUMED;
+      iterations++;
       continue;
     }
 
@@ -308,6 +326,7 @@ export const parseSimpleStatements = (
       });
       pendingTags = [];
       currentIndex = argumentIndex;
+      iterations++;
       continue;
     }
 
@@ -355,10 +374,16 @@ export const parseSimpleStatements = (
         tokens[scanIndex]?.type === TokenTypes.REPLICA_END
           ? scanIndex + 1
           : scanIndex;
+      iterations++;
       continue;
     }
 
     currentIndex++;
+    iterations++;
+  }
+
+  if (iterations >= maxIterations) {
+    console.warn('Warning: parseSimpleStatements() exceeded max iterations');
   }
 
   return result;
@@ -779,7 +804,10 @@ function parseChoiceAt(
     const parts: string[] = [];
     let foundClosingBound = false;
 
-    while (index < tokens.length) {
+    let choiceIterations = 0;
+    const maxChoiceIterations = 10000; // Защита от бесконечного цикла
+
+    while (index < tokens.length && choiceIterations < maxChoiceIterations) {
       const t = tokens[index];
 
       // End of block text
@@ -803,6 +831,11 @@ function parseChoiceAt(
       }
 
       index += 1;
+      choiceIterations++;
+    }
+
+    if (choiceIterations >= maxChoiceIterations) {
+      console.warn('Warning: parseChoiceAt() choice text parsing exceeded max iterations');
     }
 
     richText = parts.join('');
@@ -821,21 +854,32 @@ function parseChoiceAt(
 
   // Optional body: skip non-semantic tokens, then parse INDENT...DEDENT window
   // We compute indentation depth and slice the exact window for the body tokens.
+  let skipIterations = 0;
+  const maxSkipIterations = 1000; // Защита от бесконечного цикла
+
   while (
     index < tokens.length &&
     (tokens[index].type === TokenTypes.NEWLINE ||
       tokens[index].type === TokenTypes.COMMENT ||
-      tokens[index].type === TokenTypes.COMMENT_CONTENT)
+      tokens[index].type === TokenTypes.COMMENT_CONTENT) &&
+    skipIterations < maxSkipIterations
   ) {
     index += 1;
+    skipIterations++;
+  }
+
+  if (skipIterations >= maxSkipIterations) {
+    console.warn('Warning: parseChoiceAt() skip iterations exceeded max');
   }
 
   if (tokens[index] && tokens[index].type === TokenTypes.INDENT) {
     const bodyStart = index + 1;
     let depth = 1;
     let scan = bodyStart;
+    let indentIterations = 0;
+    const maxIndentIterations = 10000; // Защита от бесконечного цикла
 
-    while (scan < tokens.length && depth > 0) {
+    while (scan < tokens.length && depth > 0 && indentIterations < maxIndentIterations) {
       const t = tokens[scan];
 
       // Increase depth on nested INDENT to ensure we pair the correct closing DEDENT
@@ -848,6 +892,11 @@ function parseChoiceAt(
 
       // Advance to next token in the body scanning loop
       scan += 1;
+      indentIterations++;
+    }
+
+    if (indentIterations >= maxIndentIterations) {
+      console.warn('Warning: parseChoiceAt() indent processing exceeded max iterations');
     }
 
     // Slice the exact token window representing the choice body (excluding the final DEDENT)

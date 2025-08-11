@@ -42,6 +42,28 @@ const clientConfig = {
   logLevel: 'info'
 };
 
+const exporterConfig = {
+  entryPoints: ['src/exporter/index.ts'],
+  bundle: true,
+  platform: 'node',
+  target: 'node18',
+  format: 'cjs',
+  outfile: 'dist/exporter/index.js',
+  sourcemap: true,
+  external: [
+    'commander',
+    'chalk',
+    'ora',
+    'glob'
+  ],
+  define: {
+    'process.env.NODE_ENV': '"production"'
+  },
+  minify: false, // For debugging
+  keepNames: true,
+  logLevel: 'info'
+};
+
 // Build function
 const fs = require('fs');
 const path = require('path');
@@ -55,6 +77,10 @@ async function build() {
     // Build client
     await esbuild.build(clientConfig);
     console.log('✅ LSP client built successfully');
+    
+    // Build exporter
+    await esbuild.build(exporterConfig);
+    console.log('✅ Exporter built successfully');
     
     // Copy files to lsp/dist/lsp for VS Code extension
     const lspDistDir = path.join(__dirname, 'lsp', 'dist', 'lsp');
@@ -81,14 +107,16 @@ async function build() {
 // Watch mode function
 async function watch() {
   try {
-    // Create contexts for server and client
+    // Create contexts for server, client and exporter
     const serverContext = await esbuild.context(serverConfig);
     const clientContext = await esbuild.context(clientConfig);
+    const exporterContext = await esbuild.context(exporterConfig);
     
-    // Start watch mode for both
+    // Start watch mode for all
     await Promise.all([
       serverContext.watch(),
-      clientContext.watch()
+      clientContext.watch(),
+      exporterContext.watch()
     ]);
     
     console.log('👀 Watching for changes...');
@@ -114,6 +142,13 @@ if (args.includes('--watch')) {
     console.log('✅ LSP server built successfully');
   }).catch((error) => {
     console.error('❌ Server build failed:', error);
+    process.exit(1);
+  });
+} else if (args.includes('--exporter')) {
+  esbuild.build(exporterConfig).then(() => {
+    console.log('✅ Exporter built successfully');
+  }).catch((error) => {
+    console.error('❌ Exporter build failed:', error);
     process.exit(1);
   });
 } else {

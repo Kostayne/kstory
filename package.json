@@ -6,11 +6,18 @@
     "build:lsp:watch": "node esbuild.config.js --watch",
     "build:client": "node esbuild.config.js --client",
     "build:server": "node esbuild.config.js --server",
+    "build:exporter": "node esbuild.config.js --exporter",
+    "export": "node dist/exporter/index.js",
     "lsp": "node dist/lsp/server.js",
     "lsp:dev": "pnpm run build:lsp && pnpm run lsp",
     "dev": "pnpm run build:lsp:watch"
   },
-  "dependencies": {},
+  "dependencies": {
+    "commander": "^11.0.0",
+    "chalk": "^5.0.0",
+    "ora": "^7.0.0",
+    "glob": "^10.0.0"
+  },
   "devDependencies": {
     "@biomejs/biome": "2.1.1",
     "@types/node": "^24.0.13",
