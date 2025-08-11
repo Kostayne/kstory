@@ -27,7 +27,9 @@
           }
         }
       },
-      "suspicious": "warn",
+      "suspicious": {
+        "noConsole": "off"
+      },
       "security": "warn",
       "performance": "warn",
       "correctness": {

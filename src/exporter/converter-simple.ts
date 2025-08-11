@@ -1,4 +1,11 @@
-import type { AstProgram, AstSection, AstStatement, AstTag } from '@/ast';
+import type {
+    AstInlineCallSegment,
+    AstProgram,
+    AstSection,
+    AstStatement,
+    AstTag,
+    AstTextSegment,
+} from '@/ast';
 import type { ParserIssue } from '@/parser';
 
 export interface SimpleJsonExport {
@@ -58,12 +65,12 @@ export function convertAstToSimpleJson(
     metadata: {
       version: '1.0.0',
       exportedAt: new Date().toISOString(),
-      parserIssues: issues.map(issue => ({
+      parserIssues: issues.map((issue) => ({
         kind: issue.kind,
-        message: issue.message
-      }))
+        message: issue.message,
+      })),
     },
-    sections: ast.sections.map(convertSectionToSimple)
+    sections: ast.sections.map(convertSectionToSimple),
   };
 }
 
@@ -71,14 +78,14 @@ function convertSectionToSimple(section: AstSection): SimpleSection {
   return {
     name: section.name,
     tags: section.tags?.map(convertTagToSimple),
-    statements: section.body?.map(convertStatementToSimple) || []
+    statements: section.body?.map(convertStatementToSimple) || [],
   };
 }
 
 function convertTagToSimple(tag: AstTag): SimpleTag {
   return {
     name: tag.name,
-    value: tag.value
+    value: tag.value,
   };
 }
 
@@ -88,53 +95,53 @@ function convertStatementToSimple(statement: AstStatement): SimpleStatement {
       return {
         kind: 'Goto',
         target: statement.target,
-        tags: statement.tags?.map(convertTagToSimple)
+        tags: statement.tags?.map(convertTagToSimple),
       };
-    
+
     case 'Call':
       return {
         kind: 'Call',
         name: statement.name,
         args: statement.args,
-        tags: statement.tags?.map(convertTagToSimple)
+        tags: statement.tags?.map(convertTagToSimple),
       };
-    
+
     case 'Replica':
       return {
         kind: 'Replica',
         text: statement.text,
         segments: statement.segments?.map(convertSegmentToSimple),
-        tags: statement.tags?.map(convertTagToSimple)
+        tags: statement.tags?.map(convertTagToSimple),
       };
-    
+
     case 'Choice':
       return {
         kind: 'Choice',
         choiceText: statement.text || statement.richText || '',
         tags: statement.tags?.map(convertTagToSimple),
         choiceTags: statement.choiceTags?.map(convertTagToSimple),
-        body: statement.body?.map(convertStatementToSimple)
+        body: statement.body?.map(convertStatementToSimple),
       };
-    
+
     default:
       return { kind: 'Goto', target: 'unknown' };
   }
 }
 
-function convertSegmentToSimple(segment: any): SimpleSegment {
+function convertSegmentToSimple(
+  segment: AstTextSegment | AstInlineCallSegment
+): SimpleSegment {
   if (segment.kind === 'Text') {
     return {
       kind: 'Text',
-      text: segment.text
+      text: segment.text,
     };
   } else if (segment.kind === 'InlineCall') {
     return {
       kind: 'InlineCall',
       name: segment.name,
-      args: segment.args
+      args: segment.args,
     };
   }
   return { kind: 'Text', text: 'unknown' };
 }
-
-
