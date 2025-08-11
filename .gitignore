@@ -1,5 +1,42 @@
+# Dependencies
 node_modules/
-node_modules
+pnpm-lock.yaml
 
-dist
+# Build outputs
 dist/
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Temporary folders
+tmp/
+temp/
+
+# Test outputs
+*.json
+!package.json
+!tsconfig.json
+!biome.json
+
+# Environment variables
+.env
+.env.local
+.env.*.local

@@ -62,25 +62,53 @@ Create interactive learning experiences with branching scenarios.
 ## Getting Started
 
 ### **Installation**
+
+#### **From Source**
 ```bash
-git clone <repository-url>
+git clone https://github.com/kostayne/kstory.git
 cd kstory
 pnpm install
 pnpm run build:exporter
 ```
 
+#### **Global Installation (when published)**
+```bash
+npm install -g kstory
+# or
+pnpm add -g kstory
+```
+
 ### **Writing a Story**
-Create a `.ks` file:
+Create a `.ks` file (see `examples/basic-story.ks` for a complete example):
 ```ks
+# Single line comment
+/*
+  Multiline comment
+*/
+
+@author Author Name
+@title Story Title
+
 == Chapter_One
-"Hello, welcome to the story!"
+" Hello, welcome to the story!
+
 + Continue reading
+  @@color blue
+  @@action continue
   -> Chapter_Two
+
 + Skip to action
+  @@color red
+  @@action skip
+  ```
+  This is a multiline text block
+  that can span multiple lines
+  ```
   -> Chapter_Action
 
 == Chapter_Two
-"Here's more of the story..."
+@author Narrator
+" Here's more of the story...
 -> Chapter_One
 ```
 
