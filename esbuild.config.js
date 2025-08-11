@@ -130,6 +130,8 @@ async function watch() {
 const args = process.argv.slice(2);
 if (args.includes('--watch')) {
   watch();
+} else if (args.includes('--all')) {
+  build();
 } else if (args.includes('--client')) {
   esbuild.build(clientConfig).then(() => {
     console.log('✅ LSP client built successfully');

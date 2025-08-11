@@ -29,6 +29,7 @@
   "scripts": {
     "main": "tsx src/main.ts",
     "test": "vitest",
+    "build": "node esbuild.config.js --all",
     "build:lsp": "node esbuild.config.js",
     "build:lsp:watch": "node esbuild.config.js --watch",
     "build:client": "node esbuild.config.js --client",
