@@ -1,10 +1,10 @@
 import type {
-    AstInlineCallSegment,
-    AstProgram,
-    AstStatement,
-    AstTag,
-    AstTextSegment,
-    SourcePosition,
+  AstInlineCallSegment,
+  AstProgram,
+  AstStatement,
+  AstTag,
+  AstTextSegment,
+  SourcePosition,
 } from './ast';
 import { type Token, TokenTypes } from './token';
 
@@ -205,7 +205,9 @@ export const parseSimpleStatements = (
       // Защита от застревания - если nextStartIndex равен 0
       if (nextStartIndex === 0) {
         currentIndex++;
-        console.warn('Warning: collectLeadingTags returned nextStartIndex=0, forcing increment');
+        console.warn(
+          'Warning: collectLeadingTags returned nextStartIndex=0, forcing increment'
+        );
       }
       iterations++;
       continue;
@@ -221,7 +223,9 @@ export const parseSimpleStatements = (
       // Защита от застревания - если nextStartIndex равен 0
       if (nextStartIndex === 0) {
         currentIndex++;
-        console.warn('Warning: collectLeadingChoiceTags returned nextStartIndex=0, forcing increment');
+        console.warn(
+          'Warning: collectLeadingChoiceTags returned nextStartIndex=0, forcing increment'
+        );
       }
       iterations++;
       continue;
@@ -258,7 +262,11 @@ export const parseSimpleStatements = (
     // Parse goto statements: GOTO IDENTIFIER
     if (currentToken.type === TokenTypes.GOTO) {
       const nextToken = tokens[currentIndex + 1];
-      if (!nextToken || nextToken.type !== TokenTypes.IDENTIFIER) {
+      if (
+        !nextToken ||
+        nextToken.type !== TokenTypes.IDENTIFIER ||
+        !nextToken.value
+      ) {
         if (options.collectIssues)
           addIssue(options.issues, {
             kind: 'Error',
@@ -502,46 +510,6 @@ function getTokenEndPosition(
   )
     return undefined;
   return { line: token.endLine, column: token.endColumn };
-}
-
-// Utilities to split text with possible inline {call:...} segments
-function splitTextIntoSegments(
-  text: string,
-  out: Array<AstTextSegment | AstInlineCallSegment>
-): void {
-  let remaining = text;
-  while (remaining.length > 0) {
-    const idx = remaining.indexOf('{call:');
-    if (idx === -1) {
-      out.push({ kind: 'Text', text: remaining });
-      return;
-    }
-    if (idx > 0) {
-      out.push({ kind: 'Text', text: remaining.slice(0, idx) });
-    }
-
-    // Extract inline call content
-    let i = idx + '{call:'.length;
-    let depth = 0;
-    let inQuotes = false;
-    while (i < remaining.length) {
-      const ch = remaining[i];
-      if (ch === '"' && remaining[i - 1] !== '\\') inQuotes = !inQuotes;
-      if (!inQuotes) {
-        if (ch === '(' && remaining[i - 1] !== '\\') depth++;
-        if (ch === ')' && remaining[i - 1] !== '\\') depth--;
-        if (ch === '}' && depth <= 0) {
-          i++;
-          break;
-        }
-      }
-      i++;
-    }
-
-    const inlineSrc = remaining.slice(idx, i);
-    out.push(parseInlineCallFromText(inlineSrc));
-    remaining = remaining.slice(i);
-  }
 }
 
 // TextPiece: describes how a slice of concatenated STRING tokens maps to source positions
@@ -835,7 +803,9 @@ function parseChoiceAt(
     }
 
     if (choiceIterations >= maxChoiceIterations) {
-      console.warn('Warning: parseChoiceAt() choice text parsing exceeded max iterations');
+      console.warn(
+        'Warning: parseChoiceAt() choice text parsing exceeded max iterations'
+      );
     }
 
     richText = parts.join('');
@@ -879,7 +849,11 @@ function parseChoiceAt(
     let indentIterations = 0;
     const maxIndentIterations = 10000; // Защита от бесконечного цикла
 
-    while (scan < tokens.length && depth > 0 && indentIterations < maxIndentIterations) {
+    while (
+      scan < tokens.length &&
+      depth > 0 &&
+      indentIterations < maxIndentIterations
+    ) {
       const t = tokens[scan];
 
       // Increase depth on nested INDENT to ensure we pair the correct closing DEDENT
@@ -896,7 +870,9 @@ function parseChoiceAt(
     }
 
     if (indentIterations >= maxIndentIterations) {
-      console.warn('Warning: parseChoiceAt() indent processing exceeded max iterations');
+      console.warn(
+        'Warning: parseChoiceAt() indent processing exceeded max iterations'
+      );
     }
 
     // Slice the exact token window representing the choice body (excluding the final DEDENT)

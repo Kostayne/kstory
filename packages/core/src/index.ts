@@ -13,6 +13,7 @@ export type {
   SourcePosition,
 } from './ast';
 // Lexer exports
+// biome-ignore lint/performance/noBarrelFile: Core package barrel file for external API
 export { Lexer } from './lexer';
 
 // Parser exports

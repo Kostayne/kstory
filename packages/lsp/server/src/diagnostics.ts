@@ -56,7 +56,7 @@ function isInsideFunctionCall(line: string, charIndex: number): boolean {
 // Simple syntax validation
 export function validateDocument(
   document: TextDocument,
-  documentManager?: DocumentManager
+  _documentManager?: DocumentManager
 ): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const text = document.getText();
@@ -150,7 +150,8 @@ export function validateDocument(
     ) {
       // Check each quote position to see if it's inside a function call
       let quoteIndex = -1;
-      while ((quoteIndex = line.indexOf('"', quoteIndex + 1)) !== -1) {
+      quoteIndex = line.indexOf('"', quoteIndex + 1);
+      while (quoteIndex !== -1) {
         if (!isInsideFunctionCall(line, quoteIndex)) {
           // Quote exists but not at replica start, not inside replica, and not inside function call - possible error
           if (quoteIndex > 0 && line[quoteIndex - 1] !== ' ') {
@@ -168,6 +169,7 @@ export function validateDocument(
             break; // Only report the first problematic quote
           }
         }
+        quoteIndex = line.indexOf('"', quoteIndex + 1);
       }
     }
   });

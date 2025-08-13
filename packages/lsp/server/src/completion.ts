@@ -42,8 +42,8 @@ export function getSections(
   // Try to use parser if available
   if (documentManager) {
     const parsed = documentManager.getParsedDocument(document);
-    if (parsed && parsed.program.sections) {
-      return parsed.program.sections.map((section: any) => section.name);
+    if (parsed?.program.sections) {
+      return parsed.program.sections.map((section) => section.name);
     }
   }
 

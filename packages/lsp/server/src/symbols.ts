@@ -12,12 +12,18 @@ const INLINE_CALL_PATTERN = /\{call:(\w+)/;
 function getSections(document: TextDocument): Array<{
   name: string;
   line: number;
-  range: { start: { line: number; character: number }; end: { line: number; character: number } };
+  range: {
+    start: { line: number; character: number };
+    end: { line: number; character: number };
+  };
 }> {
   const sections: Array<{
     name: string;
     line: number;
-    range: { start: { line: number; character: number }; end: { line: number; character: number } };
+    range: {
+      start: { line: number; character: number };
+      end: { line: number; character: number };
+    };
   }> = [];
   const text = document.getText();
   const lines = text.split('\n');
@@ -32,8 +38,8 @@ function getSections(document: TextDocument): Array<{
           line: i,
           range: {
             start: { line: i, character: 0 },
-            end: { line: i, character: line.length }
-          }
+            end: { line: i, character: line.length },
+          },
         });
       }
     }
@@ -50,12 +56,18 @@ function getChoicesInSection(
 ): Array<{
   name: string;
   line: number;
-  range: { start: { line: number; character: number }; end: { line: number; character: number } };
+  range: {
+    start: { line: number; character: number };
+    end: { line: number; character: number };
+  };
 }> {
   const choices: Array<{
     name: string;
     line: number;
-    range: { start: { line: number; character: number }; end: { line: number; character: number } };
+    range: {
+      start: { line: number; character: number };
+      end: { line: number; character: number };
+    };
   }> = [];
 
   for (let i = startLine + 1; i <= endLine; i++) {
@@ -68,8 +80,8 @@ function getChoicesInSection(
           line: i,
           range: {
             start: { line: i, character: 0 },
-            end: { line: i, character: line.length }
-          }
+            end: { line: i, character: line.length },
+          },
         });
       }
     }
@@ -82,19 +94,25 @@ function getChoicesInSection(
 function getFunctionCalls(document: TextDocument): Array<{
   name: string;
   line: number;
-  range: { start: { line: number; character: number }; end: { line: number; character: number } };
+  range: {
+    start: { line: number; character: number };
+    end: { line: number; character: number };
+  };
 }> {
   const calls: Array<{
     name: string;
     line: number;
-    range: { start: { line: number; character: number }; end: { line: number; character: number } };
+    range: {
+      start: { line: number; character: number };
+      end: { line: number; character: number };
+    };
   }> = [];
   const text = document.getText();
   const lines = text.split('\n');
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    
+
     // Check for @call:function()
     const callMatch = line.match(ATCALL_PATTERN);
     if (callMatch) {
@@ -105,8 +123,8 @@ function getFunctionCalls(document: TextDocument): Array<{
         line: i,
         range: {
           start: { line: i, character: startChar },
-          end: { line: i, character: startChar + functionName.length }
-        }
+          end: { line: i, character: startChar + functionName.length },
+        },
       });
     }
 
@@ -120,8 +138,8 @@ function getFunctionCalls(document: TextDocument): Array<{
         line: i,
         range: {
           start: { line: i, character: startChar },
-          end: { line: i, character: startChar + functionName.length }
-        }
+          end: { line: i, character: startChar + functionName.length },
+        },
       });
     }
   }
@@ -130,7 +148,9 @@ function getFunctionCalls(document: TextDocument): Array<{
 }
 
 // Generate document symbols
-export function generateDocumentSymbols(document: TextDocument): DocumentSymbol[] {
+export function generateDocumentSymbols(
+  document: TextDocument
+): DocumentSymbol[] {
   const symbols: DocumentSymbol[] = [];
   const text = document.getText();
   const lines = text.split('\n');
@@ -139,15 +159,15 @@ export function generateDocumentSymbols(document: TextDocument): DocumentSymbol[
 
   // Get all sections
   const sections = getSections(document);
-  
+
   sections.forEach((section, index) => {
     // Find the end of this section (next section or end of file)
     const nextSection = sections[index + 1];
     const endLine = nextSection ? nextSection.line - 1 : lines.length - 1;
-    
+
     // Get choices within this section
     const choices = getChoicesInSection(lines, section.line, endLine);
-    
+
     // Create section symbol with proper ranges
     const sectionSymbol: DocumentSymbol = {
       name: section.name,
@@ -155,17 +175,29 @@ export function generateDocumentSymbols(document: TextDocument): DocumentSymbol[
       range: section.range,
       selectionRange: {
         start: { line: section.line, character: 3 }, // After "== "
-        end: { line: section.line, character: Math.min(3 + section.name.length, section.range.end.character) }
+        end: {
+          line: section.line,
+          character: Math.min(
+            3 + section.name.length,
+            section.range.end.character
+          ),
+        },
       },
-      children: choices.map(choice => ({
+      children: choices.map((choice) => ({
         name: choice.name,
         kind: SymbolKind.EnumMember,
         range: choice.range,
         selectionRange: {
           start: { line: choice.line, character: 2 }, // After "+ "
-          end: { line: choice.line, character: Math.min(2 + choice.name.length, choice.range.end.character) }
-        }
-      }))
+          end: {
+            line: choice.line,
+            character: Math.min(
+              2 + choice.name.length,
+              choice.range.end.character
+            ),
+          },
+        },
+      })),
     };
 
     symbols.push(sectionSymbol);
@@ -173,12 +205,12 @@ export function generateDocumentSymbols(document: TextDocument): DocumentSymbol[
 
   // Add function calls as top-level symbols
   const functionCalls = getFunctionCalls(document);
-  functionCalls.forEach(call => {
+  functionCalls.forEach((call) => {
     const callSymbol: DocumentSymbol = {
       name: `@call:${call.name}`,
       kind: SymbolKind.Function,
       range: call.range,
-      selectionRange: call.range // Use the same range for selection
+      selectionRange: call.range, // Use the same range for selection
     };
 
     symbols.push(callSymbol);

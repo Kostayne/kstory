@@ -1,36 +1,45 @@
 import { type Token, type TokenType, TokenTypes } from './token';
+
+// Extended token interface with position properties
+interface TokenWithPosition extends Token<unknown> {
+  line?: number;
+  column?: number;
+  endLine?: number;
+  endColumn?: number;
+}
+
 import {
-    callArgumentToken,
-    callToken,
-    choiceTagToken,
-    choiceTextBoundToken,
-    choiceTextToken,
-    choiceToken,
-    commentContentToken,
-    commentToken,
-    dedentToken,
-    eofToken,
-    gotoToken,
-    identifierToken,
-    indentToken,
-    multiCommentBeginToken,
-    multiCommentEndToken,
-    newLineToken,
-    replicaBeginToken,
-    replicaEndToken,
-    sectionToken,
-    stringToken,
-    tagToken,
-    tagValueToken,
+  callArgumentToken,
+  callToken,
+  choiceTagToken,
+  choiceTextBoundToken,
+  choiceTextToken,
+  choiceToken,
+  commentContentToken,
+  commentToken,
+  dedentToken,
+  eofToken,
+  gotoToken,
+  identifierToken,
+  indentToken,
+  multiCommentBeginToken,
+  multiCommentEndToken,
+  newLineToken,
+  replicaBeginToken,
+  replicaEndToken,
+  sectionToken,
+  stringToken,
+  tagToken,
+  tagValueToken,
 } from './tokenFactory';
 
 const INDENT_WIDTH = 2;
 const CALL_PREFIX_LENGTH = 6; // @call:
 const MULTI_COMMENT_START_LENGTH = 2; // /*
 const MULTI_COMMENT_END_LENGTH = 2; // */
-const CHOICE_PREFIX_LENGTH = 2; // + 
-const REPLICA_PREFIX_LENGTH = 2; // " 
-const SECTION_PREFIX_LENGTH = 3; // == 
+const CHOICE_PREFIX_LENGTH = 2; // +
+const REPLICA_PREFIX_LENGTH = 2; // "
+const SECTION_PREFIX_LENGTH = 3; // ==
 const GOTO_PREFIX_LENGTH = 3; // -> or =>
 const CHOICE_TEXT_BOUND_LENGTH = 3; // ```
 const INLINE_CALL_PREFIX_LENGTH = 6; // {call:
@@ -83,9 +92,15 @@ export class Lexer {
     }
 
     if (iterations >= maxIterations) {
-      console.error('Error: Lexer exceeded max iterations, possible infinite loop detected');
-      console.error(`Last position: ${this.position}, line: ${this.curLine}, column: ${this.curColumn}, char: '${this.curChar}'`);
-      throw new Error(`Lexer exceeded max iterations at position ${this.position}, line ${this.curLine}, column ${this.curColumn}`);
+      console.error(
+        'Error: Lexer exceeded max iterations, possible infinite loop detected'
+      );
+      console.error(
+        `Last position: ${this.position}, line: ${this.curLine}, column: ${this.curColumn}, char: '${this.curChar}'`
+      );
+      throw new Error(
+        `Lexer exceeded max iterations at position ${this.position}, line ${this.curLine}, column ${this.curColumn}`
+      );
     }
 
     this.push(eofToken());
@@ -93,28 +108,28 @@ export class Lexer {
 
   // Push a token stamped with the current cursor position (both start and end)
   private push(token: Token<unknown>) {
-    (token as any).line = this.curLine;
-    (token as any).column = this.curColumn;
-    (token as any).endLine = this.curLine;
-    (token as any).endColumn = this.curColumn;
+    (token as TokenWithPosition).line = this.curLine;
+    (token as TokenWithPosition).column = this.curColumn;
+    (token as TokenWithPosition).endLine = this.curLine;
+    (token as TokenWithPosition).endColumn = this.curColumn;
     this.tokens.push(token);
   }
 
   // Push a token with an explicit start position; end is the current cursor
   private pushAt(token: Token<unknown>, line: number, column: number) {
-    (token as any).line = line;
-    (token as any).column = column;
-    (token as any).endLine = this.curLine;
-    (token as any).endColumn = this.curColumn;
+    (token as TokenWithPosition).line = line;
+    (token as TokenWithPosition).column = column;
+    (token as TokenWithPosition).endLine = this.curLine;
+    (token as TokenWithPosition).endColumn = this.curColumn;
     this.tokens.push(token);
   }
 
   // Insert a token at an index, stamping with the current cursor position
   private insertTokenAt(index: number, token: Token<unknown>) {
-    (token as any).line = this.curLine;
-    (token as any).column = this.curColumn;
-    (token as any).endLine = this.curLine;
-    (token as any).endColumn = this.curColumn;
+    (token as TokenWithPosition).line = this.curLine;
+    (token as TokenWithPosition).column = this.curColumn;
+    (token as TokenWithPosition).endLine = this.curLine;
+    (token as TokenWithPosition).endColumn = this.curColumn;
     this.tokens.splice(index, 0, token);
   }
 
@@ -276,10 +291,10 @@ export class Lexer {
 
     const startLine = this.curLine;
     const startColumn = this.curColumn;
-    // stepping over the '@', so we can use getTagName fn.
+    // stepping over the first '@', so we can use getTagName fn.
     this.step();
 
-    const tagName = this.getTagName();
+    const tagName = `@${this.getTagName()}`;
     const value = this.getTagValue();
 
     this.pushAt(choiceTagToken(tagName), startLine, startColumn);
@@ -380,7 +395,7 @@ export class Lexer {
     }
 
     this.isInChoiceText = false;
-          this.step(CHOICE_TEXT_BOUND_LENGTH); // skip over ```
+    this.step(CHOICE_TEXT_BOUND_LENGTH); // skip over ```
     this.push(choiceTextBoundToken(isInlined));
   }
 
@@ -410,10 +425,15 @@ export class Lexer {
     const startLine = this.curLine;
     const startColumn = this.curColumn;
     this.step(CALL_PREFIX_LENGTH);
-    
+
     // Read function name
     let functionName = '';
-    while (this.curChar && this.curChar !== '(' && this.curChar !== ' ' && !this.isNewLine()) {
+    while (
+      this.curChar &&
+      this.curChar !== '(' &&
+      this.curChar !== ' ' &&
+      !this.isNewLine()
+    ) {
       functionName += this.curChar;
       this.step();
     }
@@ -423,9 +443,14 @@ export class Lexer {
       // This is an escaped parenthesis, treat as part of function name
       functionName += this.curChar;
       this.step();
-      
+
       // Continue reading until we find the real function call
-      while (this.curChar && this.curChar !== '(' && this.curChar !== ' ' && !this.isNewLine()) {
+      while (
+        this.curChar &&
+        this.curChar !== '(' &&
+        this.curChar !== ' ' &&
+        !this.isNewLine()
+      ) {
         functionName += this.curChar;
         this.step();
       }
@@ -437,7 +462,7 @@ export class Lexer {
     if (this.curChar === '(') {
       this.step(); // skip over (
       this.handleCallArguments();
-      
+
       // Skip over closing )
       this.step();
     }
@@ -467,7 +492,11 @@ export class Lexer {
           }
         } else if (this.curChar === ',' && depth === 1) {
           if (currentArg.trim().length > 0) {
-            this.pushAt(callArgumentToken(currentArg.trim()), argStartLine, argStartColumn);
+            this.pushAt(
+              callArgumentToken(currentArg.trim()),
+              argStartLine,
+              argStartColumn
+            );
           }
           currentArg = '';
           this.step();
@@ -488,7 +517,11 @@ export class Lexer {
     }
 
     if (currentArg.trim().length > 0) {
-      this.pushAt(callArgumentToken(currentArg.trim()), argStartLine, argStartColumn);
+      this.pushAt(
+        callArgumentToken(currentArg.trim()),
+        argStartLine,
+        argStartColumn
+      );
     }
   }
 
@@ -567,25 +600,36 @@ export class Lexer {
     // Read function name
     let iterations = 0;
     const maxIterations = 1000; // Защита от бесконечного цикла
-    
-    while (this.curChar && this.curChar !== '(' && this.curChar !== '}' && iterations < maxIterations) {
+
+    while (
+      this.curChar &&
+      this.curChar !== '(' &&
+      this.curChar !== '}' &&
+      iterations < maxIterations
+    ) {
       result += this.curChar;
       this.step();
       iterations++;
     }
-    
+
     if (iterations >= maxIterations) {
-      console.warn('Warning: handleInlineCall() function name reading exceeded max iterations');
+      console.warn(
+        'Warning: handleInlineCall() function name reading exceeded max iterations'
+      );
     }
-    
+
     if (this.curChar === '(') {
       result += this.curChar;
       this.step();
       let depth = 1;
       let parenIterations = 0;
       const maxParenIterations = 10000; // Защита от бесконечного цикла
-      
-      while (this.curChar && depth > 0 && parenIterations < maxParenIterations) {
+
+      while (
+        this.curChar &&
+        depth > 0 &&
+        parenIterations < maxParenIterations
+      ) {
         result += this.curChar;
         if (this.curChar === '(' && !this.isEscapedChar()) {
           depth++;
@@ -595,9 +639,11 @@ export class Lexer {
         this.step();
         parenIterations++;
       }
-      
+
       if (parenIterations >= maxParenIterations) {
-        console.warn('Warning: handleInlineCall() parentheses processing exceeded max iterations');
+        console.warn(
+          'Warning: handleInlineCall() parentheses processing exceeded max iterations'
+        );
       }
     }
     if (this.curChar === '}') {
@@ -669,7 +715,11 @@ export class Lexer {
 
   private addStringTokenIfNotEmpty(content: string): void {
     if (content.trim().length > 0) {
-      this.pushAt(stringToken(content), this.stringStartLine, this.stringStartColumn);
+      this.pushAt(
+        stringToken(content),
+        this.stringStartLine,
+        this.stringStartColumn
+      );
       this.lastStringTokenIndex = this.tokens.length - 1;
     }
   }
@@ -693,7 +743,7 @@ export class Lexer {
       }
       content += this.curChar;
 
-      if (this.isReplicaEnding()) {
+      if (isReplicaEnding) {
         isReplicaEnding = true;
         break;
       }
@@ -725,7 +775,11 @@ export class Lexer {
 
   private finalizeReplicaContent(content: string): void {
     if (content.trim().length > 0) {
-      this.pushAt(stringToken(content), this.stringStartLine, this.stringStartColumn);
+      this.pushAt(
+        stringToken(content),
+        this.stringStartLine,
+        this.stringStartColumn
+      );
       this.lastStringTokenIndex = this.tokens.length - 1;
     }
   }
@@ -814,13 +868,14 @@ export class Lexer {
     // Include the # symbol in the content
     let content = '#';
     this.step(); // skip over #
-    
+
     while (this.curChar && !this.isEndOfLine()) {
       content += this.curChar;
       this.step();
     }
-    
-    if (content.length > 1) { // More than just '#'
+
+    if (content.length > 1) {
+      // More than just '#'
       this.push(commentToken(content));
     }
   }
@@ -855,7 +910,9 @@ export class Lexer {
     }
 
     if (iterations >= maxIterations) {
-      console.warn('Warning: handleMultiCommentExtend() exceeded max iterations');
+      console.warn(
+        'Warning: handleMultiCommentExtend() exceeded max iterations'
+      );
     }
 
     // adding comment content

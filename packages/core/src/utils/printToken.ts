@@ -11,6 +11,5 @@ export const printToken = (token: Token<unknown>) => {
     }
   }
 
-  // biome-ignore lint/suspicious/noConsole: <Utility function>
   console.log(msg);
 };

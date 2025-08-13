@@ -1,5 +1,6 @@
-import type { TextDocument } from 'vscode-languageserver-textdocument';
+import type { AstProgram } from '@kstory/core';
 import { parseFromSource } from '@kstory/core';
+import type { TextDocument } from 'vscode-languageserver-textdocument';
 import { Logger } from './logger';
 
 const logger = Logger.getInstance();
@@ -7,8 +8,8 @@ const logger = Logger.getInstance();
 interface ParsedDocument {
   uri: string;
   version: number;
-  program: any; // AstProgram
-  issues: any[]; // ParserIssue[]
+  program: AstProgram;
+  issues: unknown[];
   lastModified: number;
 }
 

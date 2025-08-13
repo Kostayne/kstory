@@ -4,6 +4,10 @@ import { Logger } from './logger';
 
 const logger = Logger.getInstance();
 
+// Regular expressions - defined at top level for performance
+const CALL_PATTERN = /@call:(\w+)/;
+const INLINE_CALL_PATTERN = /\{call:(\w+)/;
+
 interface WorkspaceFile {
   uri: string;
   document: TextDocument;
@@ -93,9 +97,10 @@ export class WorkspaceManager {
         // Check for goto references (-> and =>)
         if (line.includes('->') || line.includes('=>')) {
           const gotoPattern = /(?:->|=>)\s*([^,\s]+)/g;
-          let match;
+          let match: RegExpExecArray | null;
 
-          while ((match = gotoPattern.exec(line)) !== null) {
+          match = gotoPattern.exec(line);
+          while (match !== null) {
             const targetSection = match[1];
             if (targetSection === sectionName) {
               references.push({
@@ -104,6 +109,7 @@ export class WorkspaceManager {
                 character: match.index + match[0].indexOf(targetSection),
               });
             }
+            match = gotoPattern.exec(line);
           }
         }
       }
@@ -184,13 +190,13 @@ export class WorkspaceManager {
 
     lines.forEach((line) => {
       // Check for @call:function() pattern
-      const callMatch = line.match(/@call:(\w+)/);
+      const callMatch = line.match(CALL_PATTERN);
       if (callMatch) {
         functions.push(callMatch[1]);
       }
 
       // Check for {call:function()} pattern
-      const inlineCallMatch = line.match(/\{call:(\w+)/);
+      const inlineCallMatch = line.match(INLINE_CALL_PATTERN);
       if (inlineCallMatch) {
         functions.push(inlineCallMatch[1]);
       }

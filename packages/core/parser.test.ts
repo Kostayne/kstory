@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Lexer } from './src/lexer';
 import {
-    getParserIssues,
-    parseProgramFromTokens,
-    parseSimpleStatements,
+  parseProgramFromTokens,
+  parseSimpleStatements
 } from './src/parser';
 
 const lex = (src: string) => {
@@ -52,8 +51,8 @@ describe('Parser: simple statements', () => {
   });
 
   it('emits error when Goto missing IDENTIFIER', () => {
-    parseSimpleStatements(lex('->\n'));
-    const issues = getParserIssues();
+    const issues: any[] = [];
+    parseSimpleStatements(lex('-> \n'), { collectIssues: true, issues });
     expect(
       issues.find((i) =>
         i.message.includes('Goto must be followed by IDENTIFIER')
@@ -67,8 +66,8 @@ describe('Parser: simple statements', () => {
     if (withArgs[0].kind === 'Call')
       expect(withArgs[0].args).toEqual(['1', '"a"']);
 
-    parseSimpleStatements(lex('@call:fn\n'));
-    const issues = getParserIssues();
+    const issues: any[] = [];
+    parseSimpleStatements(lex('@call:fn\n'), { collectIssues: true, issues });
     expect(
       issues.find((i) => i.message.includes('Empty or malformed call'))
     ).toBeTruthy();
@@ -96,7 +95,7 @@ describe('Parser: Choice', () => {
     const choice = section.body[0];
     expect(choice.kind).toBe('Choice');
     if (choice.kind === 'Choice') {
-      expect(choice.text).toBe(' Hello');
+      expect(choice.text).toBe('Hello');
       expect(choice.body && choice.body[0].kind).toBe('Goto');
     }
   });
@@ -106,11 +105,11 @@ describe('Parser: Choice', () => {
     const stmts = parseSimpleStatements(lex(src));
     expect(stmts[0].kind).toBe('Choice');
     if (stmts[0].kind === 'Choice') {
-      expect(stmts[0].tags?.map((t) => t.name)).toContain('ui');
-      expect(stmts[0].tags?.find((t) => t.name === 'ui')?.value).toBe(' dark');
-      expect(stmts[0].choiceTags?.map((t) => t.name)).toContain('@only');
-      expect(stmts[0].choiceTags?.find((t) => t.name === '@only')?.value).toBe(
-        ' true'
+      expect(stmts[0].tags?.map((t) => t.name)).toContain('@ui');
+      expect(stmts[0].tags?.find((t) => t.name === '@ui')?.value).toBe('dark');
+      expect(stmts[0].choiceTags?.map((t) => t.name)).toContain('@@only');
+      expect(stmts[0].choiceTags?.find((t) => t.name === '@@only')?.value).toBe(
+        'true'
       );
     }
   });

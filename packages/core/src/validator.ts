@@ -1,8 +1,8 @@
 import type {
-    AstProgram,
-    AstSection,
-    AstStatement,
-    SourcePosition,
+  AstProgram,
+  AstSection,
+  AstStatement,
+  SourcePosition,
 } from './ast';
 import { type Token, TokenTypes } from './token';
 
@@ -219,9 +219,7 @@ function validateStatements(
 }
 
 // Collect all Goto targets across the program (case preserved for messages)
-function collectGotoTargets(
-  program: AstProgram
-): {
+function collectGotoTargets(program: AstProgram): {
   target: string;
   position?: SourcePosition;
   endPosition?: SourcePosition;

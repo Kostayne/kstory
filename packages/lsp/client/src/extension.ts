@@ -1,4 +1,4 @@
-import * as path from 'path';
+import { join } from 'node:path';
 import type { ExtensionContext } from 'vscode';
 
 import {
@@ -12,10 +12,8 @@ let client: LanguageClient;
 
 export function activate(context: ExtensionContext) {
   console.log('KStory LSP Client: Activating extension...');
-  
-  const serverModule = context.asAbsolutePath(
-    path.join('dist', 'lsp', 'server.js')
-  );
+
+  const serverModule = context.asAbsolutePath(join('dist', 'lsp', 'server.js'));
 
   const serverOptions: ServerOptions = {
     run: { module: serverModule, transport: TransportKind.ipc },
@@ -41,23 +39,35 @@ export function activate(context: ExtensionContext) {
   );
 
   // Start the client. This will also launch the server
-  client.start().then(() => {
-    console.log('KStory LSP Client: Language client started successfully');
-  }).catch((error) => {
-    console.error('KStory LSP Client: Failed to start language client:', error);
-  });
+  client
+    .start()
+    .then(() => {
+      console.log('KStory LSP Client: Language client started successfully');
+    })
+    .catch((error) => {
+      console.error(
+        'KStory LSP Client: Failed to start language client:',
+        error
+      );
+    });
 }
 
 export function deactivate(): Thenable<void> | undefined {
   console.log('KStory LSP Client: Deactivating extension...');
-  
+
   if (!client) {
     return undefined;
   }
-  
-  return client.stop().then(() => {
-    console.log('KStory LSP Client: Language client stopped successfully');
-  }).catch((error) => {
-    console.error('KStory LSP Client: Error stopping language client:', error);
-  });
+
+  return client
+    .stop()
+    .then(() => {
+      console.log('KStory LSP Client: Language client stopped successfully');
+    })
+    .catch((error) => {
+      console.error(
+        'KStory LSP Client: Error stopping language client:',
+        error
+      );
+    });
 }

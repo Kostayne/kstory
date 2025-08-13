@@ -1,12 +1,12 @@
 import type {
-    AstInlineCallSegment,
-    AstProgram,
-    AstSection,
-    AstStatement,
-    AstTag,
-    AstTextSegment,
+  AstInlineCallSegment,
+  AstProgram,
+  AstSection,
+  AstStatement,
+  AstTag,
+  AstTextSegment,
+  ParserIssue,
 } from '@kstory/core';
-import type { ParserIssue } from '@kstory/core';
 
 export interface JsonExport {
   metadata: {

@@ -1,4 +1,8 @@
-import { type CodeAction, type CodeActionContext, CodeActionKind } from 'vscode-languageserver/node';
+import {
+  type CodeAction,
+  type CodeActionContext,
+  CodeActionKind,
+} from 'vscode-languageserver/node';
 import type { TextDocument } from 'vscode-languageserver-textdocument';
 import { Logger } from './logger';
 
@@ -11,8 +15,8 @@ const GOTO_MATCH_ALL_PATTERN = /(?:->|=>)\s*([^,\s]+)/g;
 function sectionExists(document: TextDocument, sectionName: string): boolean {
   const text = document.getText();
   const lines = text.split('\n');
-  
-  return lines.some(line => {
+
+  return lines.some((line) => {
     if (line.trim().startsWith('==')) {
       const name = line.trim().substring(2).trim();
       return name === sectionName;
@@ -37,7 +41,7 @@ function findMissingSections(document: TextDocument): Array<{
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    
+
     // Check for goto statements
     if (line.includes('->') || line.includes('=>')) {
       const gotoMatches = line.matchAll(GOTO_MATCH_ALL_PATTERN);
@@ -48,7 +52,7 @@ function findMissingSections(document: TextDocument): Array<{
           missingSections.push({
             sectionName: targetSection,
             line: i,
-            character: startChar
+            character: startChar,
           });
         }
       }
@@ -61,14 +65,19 @@ function findMissingSections(document: TextDocument): Array<{
 // Generate code actions
 export function generateCodeActions(
   document: TextDocument,
-  range: { start: { line: number; character: number }; end: { line: number; character: number } },
+  range: {
+    start: { line: number; character: number };
+    end: { line: number; character: number };
+  },
   context: CodeActionContext
 ): CodeAction[] {
   const actions: CodeAction[] = [];
   const text = document.getText();
   const lines = text.split('\n');
 
-  logger.debug(`Generating code actions for range: ${range.start.line}:${range.start.character} - ${range.end.line}:${range.end.character}`);
+  logger.debug(
+    `Generating code actions for range: ${range.start.line}:${range.start.character} - ${range.end.line}:${range.end.character}`
+  );
 
   // Check for missing sections in the current line
   const currentLine = lines[range.start.line];
@@ -77,8 +86,6 @@ export function generateCodeActions(
     for (const match of gotoMatches) {
       const targetSection = match[1];
       if (!sectionExists(document, targetSection)) {
-        const startChar = currentLine.indexOf(targetSection);
-        
         // Action to create missing section
         const createSectionAction: CodeAction = {
           title: `Create section "${targetSection}"`,
@@ -90,15 +97,15 @@ export function generateCodeActions(
                 {
                   range: {
                     start: { line: text.split('\n').length, character: 0 },
-                    end: { line: text.split('\n').length, character: 0 }
+                    end: { line: text.split('\n').length, character: 0 },
                   },
-                  newText: `\n== ${targetSection}\n" Content for ${targetSection}\n-> Section_One\n`
-                }
-              ]
-            }
-          }
+                  newText: `\n== ${targetSection}\n" Content for ${targetSection}\n-> Section_One\n`,
+                },
+              ],
+            },
+          },
         };
-        
+
         actions.push(createSectionAction);
         logger.debug(`Added action to create section: ${targetSection}`);
       }
@@ -119,16 +126,22 @@ export function generateCodeActions(
             [document.uri]: [
               {
                 range: {
-                  start: { line: range.start.line, character: currentLine.length },
-                  end: { line: range.start.line, character: currentLine.length }
+                  start: {
+                    line: range.start.line,
+                    character: currentLine.length,
+                  },
+                  end: {
+                    line: range.start.line,
+                    character: currentLine.length,
+                  },
                 },
-                newText: ' NewSection'
-              }
-            ]
-          }
-        }
+                newText: ' NewSection',
+              },
+            ],
+          },
+        },
       };
-      
+
       actions.push(addSectionNameAction);
       logger.debug('Added action to add section name');
     }
@@ -149,15 +162,15 @@ export function generateCodeActions(
               {
                 range: {
                   start: { line: range.start.line, character: quoteIndex + 1 },
-                  end: { line: range.start.line, character: quoteIndex + 1 }
+                  end: { line: range.start.line, character: quoteIndex + 1 },
                 },
-                newText: ' '
-              }
-            ]
-          }
-        }
+                newText: ' ',
+              },
+            ],
+          },
+        },
       };
-      
+
       actions.push(fixReplicaAction);
       logger.debug('Added action to fix replica syntax');
     }
@@ -176,19 +189,26 @@ export function generateCodeActions(
             {
               range: {
                 start: { line: text.split('\n').length, character: 0 },
-                end: { line: text.split('\n').length, character: 0 }
+                end: { line: text.split('\n').length, character: 0 },
               },
-              newText: '\n' + missingSections.map(section => 
-                `== ${section.sectionName}\n" Content for ${section.sectionName}\n-> Section_One\n`
-              ).join('\n')
-            }
-          ]
-        }
-      }
+              newText:
+                '\n' +
+                missingSections
+                  .map(
+                    (section) =>
+                      `== ${section.sectionName}\n" Content for ${section.sectionName}\n-> Section_One\n`
+                  )
+                  .join('\n'),
+            },
+          ],
+        },
+      },
     };
-    
+
     actions.push(createAllSectionsAction);
-    logger.debug(`Added action to create ${missingSections.length} missing sections`);
+    logger.debug(
+      `Added action to create ${missingSections.length} missing sections`
+    );
   }
 
   logger.info(`Generated ${actions.length} code actions`);

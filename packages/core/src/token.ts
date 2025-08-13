@@ -9,7 +9,7 @@ export const TokenTypes = {
   COMMENT_CONTENT: 'COMMENT_CONTENT', // comment content
 
   REPLICA_BEGIN: 'REPLICA_BEGIN', // "
-  REPLICA_END : 'REPLICA_END',
+  REPLICA_END: 'REPLICA_END',
 
   COMMENT_MULTILINE_BEGIN: 'COMMENT_MULTILINE_BEGIN', // /*
   COMMENT_MULTILINE_END: 'COMMENT_MULTILINE_END', // */
@@ -38,16 +38,16 @@ export const TokenTypes = {
   // function calls
   CALL: 'CALL', // @call:functionName()
   CALL_ARGUMENT: 'CALL_ARGUMENT', // function parameter
-} as const
+} as const;
 
-export type TokenType = typeof TokenTypes[keyof typeof TokenTypes]
+export type TokenType = (typeof TokenTypes)[keyof typeof TokenTypes];
 
 export interface Token<T = never> {
-  readonly type: TokenType
-  readonly value?: T
+  readonly type: TokenType;
+  readonly value?: T;
   // Optional source position (line and column) for better diagnostics
-  readonly line?: number
-  readonly column?: number
-  readonly endLine?: number
-  readonly endColumn?: number
+  readonly line?: number;
+  readonly column?: number;
+  readonly endLine?: number;
+  readonly endColumn?: number;
 }

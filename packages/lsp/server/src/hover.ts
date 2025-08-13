@@ -1,4 +1,7 @@
-import type { Hover, TextDocumentPositionParams } from 'vscode-languageserver/node';
+import type {
+  Hover,
+  TextDocumentPositionParams,
+} from 'vscode-languageserver/node';
 import type { TextDocument } from 'vscode-languageserver-textdocument';
 import { Logger } from './logger';
 
@@ -14,19 +17,19 @@ const GOTO_SECTION_PATTERN = /(?:->|=>)\s*([^,\s]+)$/;
 function isInsideFunctionCall(line: string, charIndex: number): boolean {
   // Check if we're inside @call:function() or {call:function()}
   const beforeCursor = line.substring(0, charIndex);
-  
+
   // Check for @call:function()
   const atCallMatch = beforeCursor.match(ATCALL_PATTERN);
   if (atCallMatch) {
     return true;
   }
-  
+
   // Check for {call:function()
   const inlineCallMatch = beforeCursor.match(INLINE_CALL_PATTERN);
   if (inlineCallMatch) {
     return true;
   }
-  
+
   return false;
 }
 
@@ -38,7 +41,7 @@ function getSectionAtPosition(
   const text = document.getText();
   const lines = text.split('\n');
   const currentLine = lines[position.line];
-  
+
   // Check if we're on a section line
   if (currentLine.trim().startsWith('==')) {
     const sectionName = currentLine.trim().substring(2).trim();
@@ -46,7 +49,7 @@ function getSectionAtPosition(
       return { name: sectionName, line: position.line };
     }
   }
-  
+
   return null;
 }
 
@@ -58,7 +61,7 @@ function getGotoTarget(
   const text = document.getText();
   const lines = text.split('\n');
   const currentLine = lines[position.line];
-  
+
   // Check if we're on a goto line
   if (currentLine.includes('->') || currentLine.includes('=>')) {
     const gotoMatch = currentLine.match(GOTO_PATTERN);
@@ -67,7 +70,7 @@ function getGotoTarget(
       return { target: targetSection, line: position.line };
     }
   }
-  
+
   return null;
 }
 
@@ -75,8 +78,8 @@ function getGotoTarget(
 function sectionExists(document: TextDocument, sectionName: string): boolean {
   const text = document.getText();
   const lines = text.split('\n');
-  
-  return lines.some(line => {
+
+  return lines.some((line) => {
     if (line.trim().startsWith('==')) {
       const name = line.trim().substring(2).trim();
       return name === sectionName;
@@ -95,7 +98,9 @@ export function generateHover(
   const currentLine = lines[params.position.line];
   const currentChar = currentLine[params.position.character];
 
-  logger.debug(`Generating hover at line ${params.position.line + 1}, char: ${currentChar}`);
+  logger.debug(
+    `Generating hover at line ${params.position.line + 1}, char: ${currentChar}`
+  );
 
   // Hover for sections
   const section = getSectionAtPosition(document, params.position);
@@ -115,9 +120,9 @@ export function generateHover(
           '-> OtherSection',
           '```',
           '',
-          '**Tip:** Right-click and select "Rename Symbol" to rename this section and update all references.'
-        ].join('\n')
-      }
+          '**Tip:** Right-click and select "Rename Symbol" to rename this section and update all references.',
+        ].join('\n'),
+      },
     };
   }
 
@@ -126,14 +131,16 @@ export function generateHover(
   if (goto) {
     const exists = sectionExists(document, goto.target);
     const status = exists ? '✅' : '❌';
-    
+
     return {
       contents: {
         kind: 'markdown',
         value: [
           `**Goto: ${goto.target}** ${status}`,
           '',
-          exists ? 'Section exists in document.' : '**Warning:** Section not found!',
+          exists
+            ? 'Section exists in document.'
+            : '**Warning:** Section not found!',
           '',
           '**Usage:**',
           '```kstory',
@@ -145,9 +152,9 @@ export function generateHover(
           `=> ${goto.target}`,
           '```',
           '',
-          '**Tip:** Right-click and select "Rename Symbol" to rename this section and update all references.'
-        ].join('\n')
-      }
+          '**Tip:** Right-click and select "Rename Symbol" to rename this section and update all references.',
+        ].join('\n'),
+      },
     };
   }
 
@@ -169,9 +176,9 @@ export function generateHover(
           '@meta info',
           '@call:init("param")',
           '@@choice enabled',
-          '```'
-        ].join('\n')
-      }
+          '```',
+        ].join('\n'),
+      },
     };
   }
 
@@ -195,14 +202,17 @@ export function generateHover(
           '+ Choice text',
           '  @@enabled true',
           '  -> TargetSection',
-          '```'
-        ].join('\n')
-      }
+          '```',
+        ].join('\n'),
+      },
     };
   }
 
   // Replica starts with " and space, but not inside function calls
-  if (currentChar === '"' && !isInsideFunctionCall(currentLine, params.position.character)) {
+  if (
+    currentChar === '"' &&
+    !isInsideFunctionCall(currentLine, params.position.character)
+  ) {
     return {
       contents: {
         kind: 'markdown',
@@ -221,9 +231,9 @@ export function generateHover(
           '" Hello {call:func()} world',
           '  continues here',
           '-> NextSection',
-          '```'
-        ].join('\n')
-      }
+          '```',
+        ].join('\n'),
+      },
     };
   }
 
@@ -241,9 +251,9 @@ export function generateHover(
           '" Hello {call:func("param")} world',
           '```',
           '',
-          '**Note:** Replica continues after the call.'
-        ].join('\n')
-      }
+          '**Note:** Replica continues after the call.',
+        ].join('\n'),
+      },
     };
   }
 
@@ -254,21 +264,23 @@ export function generateHover(
     const targetSection = gotoMatch[1];
     const exists = sectionExists(document, targetSection);
     const status = exists ? '✅' : '❌';
-    
+
     return {
       contents: {
         kind: 'markdown',
         value: [
           `**Section Reference: ${targetSection}** ${status}`,
           '',
-          exists ? 'Section exists in document.' : '**Warning:** Section not found!',
+          exists
+            ? 'Section exists in document.'
+            : '**Warning:** Section not found!',
           '',
           '**Usage:**',
           '```kstory',
           `-> ${targetSection}`,
-          '```'
-        ].join('\n')
-      }
+          '```',
+        ].join('\n'),
+      },
     };
   }
 

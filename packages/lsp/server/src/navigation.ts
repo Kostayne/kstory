@@ -4,6 +4,7 @@ import type {
   ReferenceParams,
   RenameParams,
   TextDocumentPositionParams,
+  TextEdit,
   WorkspaceEdit,
 } from 'vscode-languageserver/node';
 import type { TextDocument } from 'vscode-languageserver-textdocument';
@@ -135,7 +136,8 @@ export function generateDefinition(
 
   // If not found in current document and workspace manager is available, search across workspace
   if (!definition && workspaceManager) {
-    const workspaceDefinition = workspaceManager.findSectionDefinition(sectionName);
+    const workspaceDefinition =
+      workspaceManager.findSectionDefinition(sectionName);
     if (workspaceDefinition) {
       definition = {
         uri: workspaceDefinition.uri,
@@ -195,13 +197,17 @@ export function generateReferences(
 
   // If workspace manager is available, search for references across workspace
   if (workspaceManager) {
-    const workspaceReferences = workspaceManager.findSectionReferences(sectionName);
+    const workspaceReferences =
+      workspaceManager.findSectionReferences(sectionName);
     workspaceReferences.forEach((ref) => {
       references.push({
         uri: ref.uri,
         range: {
           start: { line: ref.line, character: ref.character },
-          end: { line: ref.line, character: ref.character + sectionName.length },
+          end: {
+            line: ref.line,
+            character: ref.character + sectionName.length,
+          },
         },
       });
     });
@@ -221,16 +227,16 @@ export function generateRename(
 ): WorkspaceEdit | null {
   const text = document.getText();
   const lines = text.split('\n');
-  const changes: { [uri: string]: any[] } = {};
-  const edits: any[] = [];
+  const changes: { [uri: string]: TextEdit[] } = {};
+  const edits: TextEdit[] = [];
 
   // First, try to get section name from position
   let sectionName = getSectionNameAtPosition(document, params.position);
-  
+
   // If not found, try to find section name from the current line
   if (!sectionName) {
     const currentLine = lines[params.position.line];
-    
+
     // Check if we're on a section line
     if (currentLine.trim().startsWith('==')) {
       sectionName = currentLine.trim().substring(2).trim();

@@ -31,7 +31,7 @@ export function multiCommentEndToken(): Token<string> {
 export function newLineToken(): Token<string> {
   return {
     type: TokenTypes.NEWLINE,
-    value: "\n"
+    value: '\n',
   };
 }
 
@@ -56,7 +56,7 @@ export function eofToken(): Token {
 export function replicaBeginToken(): Token<string> {
   return {
     type: TokenTypes.REPLICA_BEGIN,
-    value: '" '
+    value: '" ',
   };
 }
 

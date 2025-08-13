@@ -12,7 +12,9 @@
     "build": "node esbuild.config.js",
     "build:watch": "node esbuild.config.js --watch",
     "test": "vitest",
-    "lint": "npx @biomejs/biome check src/"
+    "lint": "biome check src/",
+    "lint:fix": "biome check src/ --write",
+    "format": "biome format src/ --write"
   },
   "keywords": [
     "kstory",
