@@ -113,6 +113,8 @@ pnpm install
 pnpm run build:exporter
 ```
 
+> **Note**: This project uses **Husky** for automated git hooks. See [`.husky/README.md`](.husky/README.md) for development workflow and commit conventions.
+
 #### **Global Installation (when published)**
 ```bash
 npm install -g kstory

@@ -33,23 +33,39 @@
     "lint:fix:core": "pnpm --filter @kstory/core run lint:fix",
     "lint:fix:lsp": "pnpm --filter @kstory/lsp run lint:fix",
     "lint:fix:exporter": "pnpm --filter @kstory/exporter run lint:fix",
-    "test": "pnpm run test:core && pnpm run test:lsp && pnpm run test:exporter",
+    "test": "pnpm run test:core",
+    "test:watch": "pnpm run test:core:watch && pnpm run test:lsp:watch && pnpm run test:exporter:watch",
     "test:core": "pnpm --filter @kstory/core run test",
     "test:lsp": "pnpm --filter @kstory/lsp run test",
     "test:exporter": "pnpm --filter @kstory/exporter run test",
+    "test:core:watch": "pnpm --filter @kstory/core run test:watch",
+    "test:lsp:watch": "pnpm --filter @kstory/lsp run test:watch",
+    "test:exporter:watch": "pnpm --filter @kstory/exporter run test:watch",
+
     "publish:core": "pnpm --filter @kstory/core publish --access public",
     "publish:exporter": "pnpm --filter @kstory/exporter publish --access public",
-    "publish:all": "pnpm run publish:core && pnpm run publish:exporter"
+    "publish:all": "pnpm run publish:core && pnpm run publish:exporter",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,ts,jsx,tsx}": [
+      "biome check --write",
+      "biome format --write"
+    ]
   },
   "dependencies": {
     "@kstory/core": "workspace:*",
-    "@kstory/lsp": "workspace:*",
-    "@kstory/exporter": "workspace:*"
+    "@kstory/exporter": "workspace:*",
+    "@kstory/lsp": "workspace:*"
   },
   "devDependencies": {
     "@biomejs/biome": "2.1.1",
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@types/node": "^24.0.13",
     "esbuild": "^0.25.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.5",
     "tsx": "^4.19.2",
     "vitest": "^2.1.8",
     "vscode-languageserver": "^9.0.1",

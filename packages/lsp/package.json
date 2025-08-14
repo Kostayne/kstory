@@ -64,7 +64,8 @@
 		"lint": "biome check .",
 		"lint:fix": "biome check . --write",
 		"format": "biome format . --write",
-		"test": "sh ./scripts/e2e.sh"
+		    "test": "sh ./scripts/e2e.sh",
+    "test:watch": "sh ./scripts/e2e.sh --watch"
 	},
 	"dependencies": {
 		"@kstory/core": "workspace:*"

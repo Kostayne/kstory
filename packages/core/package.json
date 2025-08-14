@@ -19,7 +19,8 @@
   "scripts": {
     "build": "node esbuild.config.js",
     "build:watch": "node esbuild.config.js --watch",
-    "test": "vitest",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "biome check src/",
     "lint:fix": "biome check src/ --write",
     "format": "biome format src/ --write"
