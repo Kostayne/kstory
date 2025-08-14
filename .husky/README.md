@@ -78,6 +78,15 @@ If hooks fail:
 3. Stage the fixes: `git add .`
 4. Try committing again
 
+### Manual Hook Setup
+
+If hooks don't work automatically, run:
+```bash
+pnpm run setup:hooks
+```
+
+This will copy the hooks from `.husky/` to `.git/hooks/` and make them executable.
+
 ## Testing Commands
 
 This project uses different test commands:

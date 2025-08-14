@@ -44,7 +44,8 @@
     "publish:core": "pnpm --filter @kstory/core publish --access public",
     "publish:exporter": "pnpm --filter @kstory/exporter publish --access public",
     "publish:all": "pnpm run publish:core && pnpm run publish:exporter",
-    "postinstall": "husky"
+    "postinstall": "husky",
+    "setup:hooks": "bash scripts/setup-hooks.sh"
   },
   "lint-staged": {
     "*.{js,ts,jsx,tsx}": [
