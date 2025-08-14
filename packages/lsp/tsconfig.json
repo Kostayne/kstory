@@ -5,9 +5,11 @@
 		"lib": [
 			"ES2024"
 		],
-		"outDir": "out",
+		"outDir": "dist",
 		"rootDir": "src",
 		"sourceMap": true,
+		"declaration": true,
+		"declarationMap": true,
 		"baseUrl": ".",
 		"paths": {
 			"@/*": ["../src/*"],

@@ -36,7 +36,10 @@
     "test": "pnpm run test:core && pnpm run test:lsp && pnpm run test:exporter",
     "test:core": "pnpm --filter @kstory/core run test",
     "test:lsp": "pnpm --filter @kstory/lsp run test",
-    "test:exporter": "pnpm --filter @kstory/exporter run test"
+    "test:exporter": "pnpm --filter @kstory/exporter run test",
+    "publish:core": "pnpm --filter @kstory/core publish --access public",
+    "publish:exporter": "pnpm --filter @kstory/exporter publish --access public",
+    "publish:all": "pnpm run publish:core && pnpm run publish:exporter"
   },
   "dependencies": {
     "@kstory/core": "workspace:*",

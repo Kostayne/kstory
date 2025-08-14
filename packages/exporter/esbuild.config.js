@@ -1,4 +1,5 @@
 const esbuild = require('esbuild');
+const { execSync } = require('child_process');
 
 const exporterConfig = {
   entryPoints: ['src/index.ts'],
@@ -33,6 +34,10 @@ async function build() {
   try {
     await esbuild.build(exporterConfig);
     console.log('✅ Exporter built successfully');
+    
+    // Generate TypeScript declarations
+    execSync('npx tsc --emitDeclarationOnly', { stdio: 'inherit' });
+    console.log('✅ TypeScript declarations generated successfully');
   } catch (error) {
     console.error('❌ Exporter build failed:', error);
     process.exit(1);

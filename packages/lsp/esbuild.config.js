@@ -1,4 +1,5 @@
 const esbuild = require('esbuild');
+const { execSync } = require('node:child_process');
 
 const serverConfig = {
   entryPoints: ['server/src/server.ts'],
@@ -56,6 +57,12 @@ async function build() {
     // Build client
     await esbuild.build(clientConfig);
     console.log('✅ LSP client built successfully');
+
+    // Generate TypeScript declarations
+    execSync('npx tsc --emitDeclarationOnly -p tsconfig.types.json', {
+      stdio: 'inherit',
+    });
+    console.log('✅ TypeScript declarations generated successfully');
   } catch (error) {
     console.error('❌ LSP build failed:', error);
     process.exit(1);

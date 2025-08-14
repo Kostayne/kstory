@@ -1,12 +1,13 @@
 const esbuild = require('esbuild');
+const { execSync } = require('child_process');
 
 const coreConfig = {
   entryPoints: ['src/index.ts'],
   bundle: true,
   platform: 'node',
   target: 'node18',
-  format: 'cjs',
-  outfile: 'dist/index.js',
+  format: 'esm',
+  outfile: 'dist/index.mjs',
   sourcemap: true,
   external: [],
   define: {
@@ -17,6 +18,12 @@ const coreConfig = {
   logLevel: 'info'
 };
 
+const coreConfigCjs = {
+  ...coreConfig,
+  format: 'cjs',
+  outfile: 'dist/index.cjs'
+};
+
 // Export configuration for reuse
 module.exports = {
   getConfig: () => coreConfig
@@ -25,8 +32,19 @@ module.exports = {
 // Build function
 async function build() {
   try {
+    // Build ESM version
     await esbuild.build(coreConfig);
-    console.log('✅ Core package built successfully');
+    console.log('✅ Core package ESM built successfully');
+    
+    // Build CJS version
+    await esbuild.build(coreConfigCjs);
+    console.log('✅ Core package CJS built successfully');
+    
+    // Generate TypeScript declarations
+    execSync('npx tsc --emitDeclarationOnly', { stdio: 'inherit' });
+    console.log('✅ TypeScript declarations generated successfully');
+    
+    console.log('✅ Core package built successfully (dual format + types)');
   } catch (error) {
     console.error('❌ Core build failed:', error);
     process.exit(1);

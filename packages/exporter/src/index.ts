@@ -9,7 +9,7 @@ const KS_FILE_REGEX = /\.ks$/;
 const program = new Command();
 
 program
-  .name('kstory-export')
+  .name('kstory')
   .description(
     'Export .ks files to JSON format (simple by default, optimized for game engines)'
   )

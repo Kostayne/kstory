@@ -2,7 +2,6 @@
   "name": "@kstory/exporter",
   "version": "1.0.0",
   "description": "CLI exporter for KStory interactive fiction language",
-  "private": true,
   "main": "dist/index.js",
   "bin": {
     "kstory": "dist/index.js"
@@ -17,7 +16,10 @@
     "test": "vitest",
     "lint": "biome check src/",
     "lint:fix": "biome check src/ --write",
-    "format": "biome format src/ --write"
+    "format": "biome format src/ --write",
+    "prepublishOnly": "npm run prepare:prod",
+    "prepare:prod": "node scripts/prepare-prod.js",
+    "prepare:dev": "node scripts/prepare-dev.js"
   },
   "keywords": [
     "kstory",
@@ -32,6 +34,9 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/kostayne/kstory"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "@kstory/core": "workspace:*",
