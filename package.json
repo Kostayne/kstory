@@ -41,11 +41,10 @@
     "test:core:watch": "pnpm --filter @kstory/core run test:watch",
     "test:lsp:watch": "pnpm --filter @kstory/lsp run test:watch",
     "test:exporter:watch": "pnpm --filter @kstory/exporter run test:watch",
-
     "publish:core": "pnpm --filter @kstory/core publish --access public",
     "publish:exporter": "pnpm --filter @kstory/exporter publish --access public",
     "publish:all": "pnpm run publish:core && pnpm run publish:exporter",
-    "prepare": "husky"
+    "postinstall": "husky"
   },
   "lint-staged": {
     "*.{js,ts,jsx,tsx}": [
@@ -64,7 +63,6 @@
     "@commitlint/config-conventional": "^19.8.1",
     "@types/node": "^24.0.13",
     "esbuild": "^0.25.8",
-    "husky": "^9.1.7",
     "lint-staged": "^16.1.5",
     "tsx": "^4.19.2",
     "vitest": "^2.1.8",
