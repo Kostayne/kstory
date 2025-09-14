@@ -56,7 +56,8 @@
 		}
 	},
 	"scripts": {
-		"vscode:prepublish": "npm run build",
+		"vscode:prepublish": "npm run test && npm run build",
+		"prepublishOnly": "npm run test && npm run build",
 		"build": "node esbuild.config.js",
 		"build:watch": "node esbuild.config.js --watch",
 		"build:server": "node esbuild.config.js --server",

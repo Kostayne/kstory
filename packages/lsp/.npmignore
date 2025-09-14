@@ -1,0 +1,57 @@
+# Source files
+client/src/
+server/src/
+*.ts
+
+# Test files
+*.test.ts
+*.spec.ts
+test/
+tests/
+__tests__/
+
+# Build configuration
+esbuild.config.js
+tsconfig.json
+tsconfig.types.json
+
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+pnpm-lock.yaml
+package-lock.json
+client/package-lock.json
+server/package-lock.json
+
+# Build artifacts (keep dist/ for published extension)
+*.tsbuildinfo
+
+# Development files
+.git/
+.gitignore
+.editorconfig
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Extension packaging
+*.vsix
+
+# Scripts
+scripts/
+package-extension.sh

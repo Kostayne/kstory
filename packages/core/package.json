@@ -5,6 +5,7 @@
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
+  "private": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -23,7 +24,8 @@
     "test:watch": "vitest",
     "lint": "biome check src/",
     "lint:fix": "biome check src/ --write",
-    "format": "biome format src/ --write"
+    "format": "biome format src/ --write",
+    "prepublishOnly": "npm run test && npm run build"
   },
   "keywords": [
     "kstory",
